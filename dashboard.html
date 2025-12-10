@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>热词监控与控制中心</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f3f4f6;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            height: 90vh;
+        }
+
+        /* 左侧图表区 */
+        .chart-section {
+            flex: 2;
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #main {
+            flex: 1;
+            width: 100%;
+        }
+
+        /* 右侧控制区 */
+        .control-section {
+            flex: 1;
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            overflow-y: auto;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #1f2937;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+
+        .group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .group h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #4b5563;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button.danger {
+            background: #dc2626;
+        }
+
+        #log {
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #059669;
+            white-space: pre-wrap;
+        }
+
+        /* 弹窗遮罩层 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 弹窗主体 */
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            width: 400px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            animation: popIn 0.3s ease;
+        }
+
+        /* 统计表格样式 */
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed #eee;
+        }
+
+        .stat-label {
+            color: #666;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #2563eb;
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 左侧：图表 -->
+    <div class="chart-section">
+        <h2>🔥 实时热词排行榜</h2>
+        <div id="main"></div>
+    </div>
+
+    <!-- 右侧：控制面板 -->
+    <div class="control-section">
+        <h2>🎮 控制台</h2>
+
+        <!-- 反馈日志 -->
+        <div class="group">
+            <h3>📟 系统反馈</h3>
+            <div id="log">Ready...</div>
+        </div>
+
+        <!-- 1. 数据录入 -->
+        <div class="group">
+            <h3>📝 模拟数据输入</h3>
+            <textarea id="dataInput" rows="3" placeholder="[00:00:10] 华为 发布 新手机..."></textarea>
+            <button onclick="sendManualData()">发送数据</button>
+        </div>
+
+        <!-- 2. 窗口配置 -->
+        <div class="group">
+            <h3>⚙️ 窗口设置</h3>
+            <div style="display:flex; gap:5px;">
+                <input type="number" id="windowSize" placeholder="秒 (如 600)" value="600">
+                <button onclick="setWindow()" style="width: auto;">应用</button>
+            </div>
+        </div>
+
+        <!-- 3. 压力测试 -->
+        <div class="group">
+            <h3>⚡ 性能压测</h3>
+            <input type="number" id="benchCount" value="5000" placeholder="数量">
+
+            <div style="display: flex; gap: 5px;">
+                <button class="danger" onclick="runBenchmark()">启动压测</button>
+                <!-- 【新增】查看报告按钮 -->
+                <button onclick="showStats()" style="background:#4b5563;">查看报告</button>
+            </div>
+        </div>
+
+        <!-- 4. 历史报告 -->
+        <div class="group">
+            <h3>📂 历史报告生成</h3>
+            <input type="text" id="histStart" placeholder="开始: 00:00:00" value="00:00:00">
+            <input type="text" id="histEnd" placeholder="结束: 02:00:00" value="02:00:00">
+            <button onclick="genHistory()">生成报告</button>
+        </div>
+
+        <!-- 5. 系统管理 -->
+        <div class="group" style="border-color: #fca5a5; background: #fef2f2;">
+            <h3 style="color: #b91c1c;">🚨 系统管理</h3>
+            <button class="danger" onclick="resetSystem()">♻️ 清空所有数据 (Reset)</button>
+        </div>
+
+        
+
+        <!-- 弹窗结构 -->
+        <div id="statsModal" class="modal-overlay">
+            <div class="modal-content">
+                <h2 style="margin-top:0; border-bottom:none;">📊 系统性能报告</h2>
+
+                <div class="stat-row">
+                    <span class="stat-label">运行时间</span>
+                    <span class="stat-value" id="disp_runtime">0 s</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">处理行数</span>
+                    <span class="stat-value" id="disp_lines">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">处理词数</span>
+                    <span class="stat-value" id="disp_words">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">吞吐量 (QPS)</span>
+                    <span class="stat-value" id="disp_qps">0 /s</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">内存占用</span>
+                    <span class="stat-value" id="disp_mem" style="color: #dc2626;">0 MB</span>
+                </div>
+
+                <div style="margin-top: 20px; text-align: right;">
+                    <button onclick="closeStats()" style="width: auto; background: #9ca3af;">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 图表初始化 ---
+        var myChart = echarts.init(document.getElementById('main'));
+        var option = {
+            tooltip: { trigger: 'axis' },
+            xAxis: { type: 'category', data: [] },
+            yAxis: { type: 'value' },
+            series: [{
+                type: 'bar',
+                data: [],
+                itemStyle: { borderRadius: [5, 5, 0, 0], color: '#3b82f6' },
+                label: { show: true, position: 'top' },
+                animationDuration: 300
+            }]
+        };
+        myChart.setOption(option);
+
+        // --- 2. 自动刷新数据 (每秒) ---
+        setInterval(() => {
+            fetch('/api/data')
+                .then(res => res.json())
+                .then(data => {
+                    myChart.setOption({
+                        xAxis: { data: data.categories },
+                        series: [{ data: data.values }]
+                    });
+                });
+        }, 1000);
+
+        // --- 3. 控制逻辑 ---
+        function sendCommand(cmdStr) {
+            const logEl = document.getElementById('log');
+            logEl.innerText = "Sending...";
+
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cmd: cmdStr })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    logEl.innerText = "✅ " + data.message;
+                })
+                .catch(err => {
+                    logEl.innerText = "❌ Error: " + err;
+                });
+        }
+
+        function sendManualData() {
+            const val = document.getElementById('dataInput').value;
+            if (!val) return;
+            // 如果用户没写时间戳，自动补一个当前时间（伪造一个）
+            let cmd = val;
+            if (!val.startsWith('[')) {
+                // 简单演示，统一补 [00:00:01]
+                cmd = "[00:00:01] " + val;
+            }
+            sendCommand(cmd);
+        }
+
+        function setWindow() {
+            const s = document.getElementById('windowSize').value;
+            sendCommand(`[ACTION] SET_WINDOW S=${s}`);
+        }
+
+        function runBenchmark() {
+            const n = document.getElementById('benchCount').value;
+            sendCommand(`[ACTION] BENCHMARK N=${n}`);
+        }
+
+        function genHistory() {
+            const s = document.getElementById('histStart').value;
+            const e = document.getElementById('histEnd').value;
+            sendCommand(`[ACTION] HISTORY START=${s} END=${e} STEP=60`);
+        }
+
+        function resetSystem() {
+            if (!confirm("确定要清空所有统计数据吗？此操作不可恢复。")) return;
+            sendCommand("[ACTION] RESET");
+        }
+
+        // 打开弹窗
+        function showStats() {
+            fetch('/api/stats')
+                .then(res => res.json())
+                .then(data => {
+                    // 填充数据，保留2位小数
+                    document.getElementById('disp_runtime').innerText = data.runtime.toFixed(2) + " s";
+                    document.getElementById('disp_lines').innerText = Math.floor(data.lines);
+                    document.getElementById('disp_words').innerText = Math.floor(data.words);
+                    document.getElementById('disp_qps').innerText = data.qps.toFixed(2) + " lines/s";
+                    document.getElementById('disp_mem').innerText = data.memory.toFixed(2) + " MB";
+
+                    // 显示弹窗
+                    document.getElementById('statsModal').style.display = 'flex';
+                })
+                .catch(err => alert("获取失败: " + err));
+        }
+
+        // 关闭弹窗
+        function closeStats() {
+            document.getElementById('statsModal').style.display = 'none';
+        }
+
+        // 点击遮罩层也能关闭
+        document.getElementById('statsModal').addEventListener('click', function (e) {
+            if (e.target === this) closeStats();
+        });
+    </script>
+</body>
+
+</html>

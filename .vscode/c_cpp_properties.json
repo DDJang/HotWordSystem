@@ -1,0 +1,28 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/third_party/cppjieba/include",
+                "${workspaceFolder}/third_party/cppjieba/deps/limonp/include",
+                "${workspaceFolder}/third_party/httplib",
+                "${workspaceFolder}/third_party/json"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            // 注意：请检查下面这行编译器的路径！
+            // 如果你的电脑上不是这个路径，请改成你实际的 g++.exe 路径。
+            // 比如 D:/MinGW/bin/g++.exe 或者 C:/msys64/mingw64/bin/g++.exe
+            "compilerPath": "D:/mingw64/bin/g++.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-gcc-x64"
+        }
+    ],
+    "version": 4
+}
