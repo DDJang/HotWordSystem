@@ -1,62 +1,264 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <title>热词监控与控制中心 V2.2</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
-        :root { --primary: #2563eb; --bg: #f3f4f6; --card: #ffffff; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; gap: 20px; padding: 20px; height: 95vh; box-sizing: border-box; }
-        
-        .left-col { flex: 2; display: flex; flex-direction: column; gap: 20px; }
-        .right-col { flex: 1; background: var(--card); border-radius: 12px; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        :root {
+            --primary: #2563eb;
+            --bg: #f3f4f6;
+            --card: #ffffff;
+        }
 
-        .card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .chart-box { flex: 1; min-height: 300px; }
-        
-        h2 { margin-top: 0; color: #1f2937; margin-bottom: 10px; font-size: 20px; }
-        h3 { font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin: 0 0 10px 0; color: #4b5563; font-weight: 700; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            height: 95vh;
+            box-sizing: border-box;
+        }
 
-        .control-group { border: 1px solid #f3f4f6; padding: 10px; border-radius: 8px; background: #fafafa; }
+        .left-col {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
 
-        input, button, textarea { width: 100%; padding: 6px 10px; margin-bottom: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; font-size: 13px; }
-        button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; padding: 8px; }
-        button:hover { opacity: 0.9; }
-        button.secondary { background: #6b7280; }
-        button.danger { background: #dc2626; }
-        button.success { background: #059669; }
-        
-        .dual-input { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
-        .dual-input label { font-size: 12px; color: #666; width: 55px; flex-shrink: 0; }
-        .row { display: flex; gap: 8px; }
+        .right-col {
+            flex: 1;
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
 
-        .tag-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 5px; }
-        .tag-check { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
-        
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { text-align: left; padding: 6px; border-bottom: 1px solid #eee; }
-        th { color: #666; font-weight: normal; }
-        .trend-up { color: #dc2626; font-weight: bold; }
-        .trend-down { color: #059669; font-weight: bold; }
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
 
-        .badge { background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 10px; font-size: 11px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+        .chart-box {
+            flex: 1;
+            min-height: 300px;
+        }
 
-        #windowInfo { font-size: 14px; color: #666; font-family: monospace; }
-        
-        #log { 
-            font-family: 'Consolas', monospace; font-size: 12px; color: #10b981; 
-            background: #1f2937; padding: 10px; border-radius: 6px; 
-            min-height: 40px; max-height: 80px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 0;
+        h2 {
+            margin-top: 0;
+            color: #1f2937;
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+
+        h3 {
+            font-size: 14px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            margin: 0 0 10px 0;
+            color: #4b5563;
+            font-weight: 700;
+        }
+
+        .control-group {
+            border: 1px solid #f3f4f6;
+            padding: 10px;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        input,
+        button,
+        textarea {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 13px;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+            padding: 8px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button.secondary {
+            background: #6b7280;
+        }
+
+        button.danger {
+            background: #dc2626;
+        }
+
+        button.success {
+            background: #059669;
+        }
+
+        .dual-input {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        .dual-input label {
+            font-size: 12px;
+            color: #666;
+            width: 55px;
+            flex-shrink: 0;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tag-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 5px;
+        }
+
+        .tag-check {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 6px;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            color: #666;
+            font-weight: normal;
+        }
+
+        .trend-up {
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        .trend-down {
+            color: #059669;
+            font-weight: bold;
+        }
+
+        .badge {
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        #windowInfo {
+            font-size: 14px;
+            color: #666;
+            font-family: monospace;
+        }
+
+        #log {
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            color: #10b981;
+            background: #1f2937;
+            padding: 10px;
+            border-radius: 6px;
+            min-height: 40px;
+            max-height: 80px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 0;
         }
 
         /* 弹窗样式 */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.3s ease; }
-        .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
-        .stat-val { font-weight: bold; color: var(--primary); font-family: monospace; }
-        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            width: 350px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            animation: popIn 0.3s ease;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #eee;
+            font-size: 14px;
+        }
+
+        .stat-val {
+            font-weight: bold;
+            color: var(--primary);
+            font-family: monospace;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
+
 <body>
 
     <div class="left-col">
@@ -78,7 +280,14 @@
             </div>
             <div style="overflow-y: auto; height: 80%;">
                 <table>
-                    <thead><tr><th>#</th><th>热词</th><th>趋势分</th><th>状态</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>热词</th>
+                            <th>趋势分</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
                     <tbody id="trendBody"></tbody>
                 </table>
             </div>
@@ -87,12 +296,14 @@
 
     <div class="right-col">
         <h2 style="margin-bottom: 0;">🎮 控制台</h2>
-        
-        <div><div id="log">System Ready...</div></div>
+
+        <div>
+            <div id="log">System Ready...</div>
+        </div>
 
         <!-- 时间窗口 -->
         <div class="control-group">
-            <h3>⏳ 时间窗口管理</h3>
+            <h3>⏳ 视图设置</h3>
             <div class="dual-input">
                 <label>Window:</label>
                 <input type="number" id="winSize" value="600" placeholder="分析(s)">
@@ -103,6 +314,12 @@
                 <input type="number" id="retSize" value="3600" placeholder="保留(s)">
                 <!-- 颜色修复：去掉了 style="background-color:..."，现在和上面一样是蓝色 -->
                 <button onclick="updateRetention()" style="width: 50px;">Set</button>
+            </div>
+            <!-- 【新增】Top-K 设置 -->
+            <div class="dual-input">
+                <label>Top-K:</label>
+                <input type="number" id="displayK" value="10" placeholder="显示数量">
+                <!-- 这里不需要按钮，JS 会自动读取 -->
             </div>
             <div style="font-size:11px; color:#999; text-align:right;" id="retentionInfo">Retention: -- s</div>
         </div>
@@ -118,18 +335,33 @@
 
         <!-- 过滤配置 -->
         <div class="control-group">
-            <h3>⚙️ 过滤配置</h3>
+            <h3>⚙️ 过滤配置 (实时生效)</h3>
             <div class="tag-group">
-                <label class="tag-check"><input type="checkbox" value="n" checked> 名(n)</label>
-                <label class="tag-check"><input type="checkbox" value="v" checked> 动(v)</label>
-                <label class="tag-check"><input type="checkbox" value="a"> 形(a)</label>
-                <label class="tag-check"><input type="checkbox" value="nr"> 人</label>
-                <label class="tag-check"><input type="checkbox" value="eng" checked> Eng</label>
+                <!-- 【新增】允许所有 -->
+                <label class="tag-check" style="font-weight:bold; color:#2563eb;">
+                    <input type="checkbox" id="cb_all" onchange="toggleAll(this)"> 🟢 允许所有词性
+                </label>
+
+                <!-- 分割线 -->
+                <span style="border-left:1px solid #ccc; margin:0 5px;"></span>
+
+                <!-- 常规词性 -->
+                <label class="tag-check"><input type="checkbox" class="pos-item" value="n" checked
+                        onchange="updateConfig()"> 名(n)</label>
+                <label class="tag-check"><input type="checkbox" class="pos-item" value="v" checked
+                        onchange="updateConfig()"> 动(v)</label>
+                <label class="tag-check"><input type="checkbox" class="pos-item" value="a" onchange="updateConfig()">
+                    形(a)</label>
+                <label class="tag-check"><input type="checkbox" class="pos-item" value="nr" onchange="updateConfig()">
+                    人</label>
+                <label class="tag-check"><input type="checkbox" class="pos-item" value="eng" checked
+                        onchange="updateConfig()"> Eng</label>
             </div>
-            <div class="row">
+
+            <!-- 敏感词部分保持不变 -->
+            <div class="row" style="margin-top:8px;">
                 <input type="text" id="newSensitive" placeholder="屏蔽词..." style="margin-bottom:0;">
                 <button onclick="addSensitive()" style="width:40px;">+</button>
-                <button onclick="updateConfig()" class="secondary" style="width:80px;">更新</button>
             </div>
             <div id="sensitiveList" class="tag-group" style="margin-top:5px;"></div>
         </div>
@@ -175,7 +407,8 @@
             <div class="stat-row"><span>处理行数</span><span class="stat-val" id="st_lines">0</span></div>
             <div class="stat-row"><span>处理词数</span><span class="stat-val" id="st_words">0</span></div>
             <div class="stat-row"><span>吞吐量 (QPS)</span><span class="stat-val" id="st_qps">0</span></div>
-            <div class="stat-row"><span>内存占用</span><span class="stat-val" style="color:#dc2626;" id="st_mem">0 MB</span></div>
+            <div class="stat-row"><span>内存占用</span><span class="stat-val" style="color:#dc2626;" id="st_mem">0 MB</span>
+            </div>
             <div style="text-align:right; margin-top:15px;">
                 <button onclick="closeStats(null)" class="secondary" style="width:auto;">关闭</button>
             </div>
@@ -189,23 +422,53 @@
             grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true, top: '10%' },
             xAxis: { type: 'category', data: [] },
             yAxis: { type: 'value' },
-            series: [{ type: 'bar', data: [], itemStyle: { color: '#3b82f6', borderRadius: [4,4,0,0] }, label: { show: true, position: 'top' } }]
+            series: [{ type: 'bar', data: [], itemStyle: { color: '#3b82f6', borderRadius: [4, 4, 0, 0] }, label: { show: true, position: 'top' } }]
         });
 
         var isHistoryMode = false;
 
+        // --- 核心循环 ---
         setInterval(() => {
             if (isHistoryMode) return;
-            fetch('/api/data').then(r=>r.json()).then(d => {
-                myChart.setOption({
-                    xAxis: { data: d.categories },
-                    series: [{ data: d.values, itemStyle: { color: '#3b82f6' } }]
+
+            // 1. 获取用户设置的 K 值
+            let k = document.getElementById('displayK').value || 10;
+
+            // 2. 拼接到请求 URL 中
+            fetch('/api/data?k=' + k)
+                .then(res => res.json())
+                .then(data => {
+                    myChart.setOption({
+                        xAxis: { data: data.categories },
+                        series: [{ 
+                            data: data.values,
+                            itemStyle: { color: '#3b82f6' } 
+                        }]
+                    });
+                    document.getElementById('windowInfo').innerText = 
+                        `Window: [${data.window_start} ~ ${data.window_end}] | Now: ${data.current_ts}`;
+                    document.getElementById('retentionInfo').innerText = `Retention: ${data.retention_sec} s`;
                 });
-                document.getElementById('windowInfo').innerText = `Window: [${d.window_start} ~ ${d.window_end}] | Now: ${d.current_ts}`;
-                document.getElementById('retentionInfo').innerText = `Retention: ${d.retention_sec} s`;
-            });
+            
+            // 趋势接口也可以加上 k，或者保持默认 10
             fetch('/api/trends?k=10').then(r=>r.json()).then(list => renderTrends(list));
         }, 1000);
+
+        // 【新增】处理 "全选" 逻辑
+        function toggleAll(el) {
+            const isAll = el.checked;
+            const items = document.querySelectorAll('.pos-item');
+
+            // 视觉上禁用/启用其他复选框
+            items.forEach(cb => {
+                cb.disabled = isAll;
+                // 可选：如果全选了，让其他项看起来变灰
+                cb.parentElement.style.opacity = isAll ? "0.5" : "1";
+            });
+
+            // 立即触发更新
+            updateConfig();
+        }
 
         function renderTrends(list) {
             const tbody = document.getElementById('trendBody');
@@ -216,7 +479,7 @@
                 if (Math.abs(item.score) < threshold) return;
                 const tr = document.createElement('tr');
                 const trendClass = item.score > 0 ? "trend-up" : "trend-down";
-                tr.innerHTML = `<td>${rank++}</td><td style="font-weight:bold;">${item.word}</td><td class="${trendClass}">${item.score.toFixed(2)}</td><td class="${trendClass}">${item.score>0?"🔥":"❄️"}</td>`;
+                tr.innerHTML = `<td>${rank++}</td><td style="font-weight:bold;">${item.word}</td><td class="${trendClass}">${item.score.toFixed(2)}</td><td class="${trendClass}">${item.score > 0 ? "🔥" : "❄️"}</td>`;
                 tbody.appendChild(tr);
             });
         }
@@ -224,47 +487,86 @@
         // API 基础函数
         function apiPost(url, data) {
             log("Sending...");
-            fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) })
-            .then(r=>r.json()).then(d=>log("✅ "+(d.message||"OK"))).catch(e=>log("❌ "+e));
+            fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+                .then(r => r.json()).then(d => log("✅ " + (d.message || "OK"))).catch(e => log("❌ " + e));
         }
-        function log(msg) { 
+        function log(msg) {
             const el = document.getElementById('log');
-            el.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`; 
+            el.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
         }
 
         // 按钮功能函数
-        function updateWindowSize() { 
+        function updateWindowSize() {
             const s = document.getElementById('winSize').value;
-            if(s) apiPost('/api/command', { cmd: `[ACTION] SET_WINDOW S=${s}` });
+            if (s) apiPost('/api/command', { cmd: `[ACTION] SET_WINDOW S=${s}` });
         }
-        function updateRetention() { 
+        function updateRetention() {
             const r = document.getElementById('retSize').value;
-            if(r) apiPost('/api/command', { cmd: `[ACTION] SET_RETENTION R=${r}` });
+            if (r) apiPost('/api/command', { cmd: `[ACTION] SET_RETENTION R=${r}` });
         }
-        function sendManualData() { 
+        function sendManualData() {
             const val = document.getElementById('manualInput').value;
-            if(val) { apiPost('/api/command', { cmd: val }); document.getElementById('manualInput').value=""; }
+            if (val) { apiPost('/api/command', { cmd: val }); document.getElementById('manualInput').value = ""; }
         }
+
+        // 【修改】实时更新配置 (无需按钮)
         function updateConfig() {
-            const tags = Array.from(document.querySelectorAll('.tag-check input:checked')).map(c=>c.value);
-            apiPost('/api/config', { tags: tags });
-        }
-        function loadSensitive() {
-            fetch('/api/config').then(r=>r.json()).then(d => {
-                const div = document.getElementById('sensitiveList'); div.innerHTML = "";
-                d.sensitive_words.forEach(w => {
-                    const s = document.createElement('span'); s.className="badge"; s.innerHTML=`${w} ×`;
-                    s.onclick=()=>removeSensitive(w); div.appendChild(s);
-                });
+            const allowAll = document.getElementById('cb_all').checked;
+
+            // 收集被勾选的常规 tags
+            const checks = document.querySelectorAll('.pos-item:checked');
+            const tags = Array.from(checks).map(c => c.value);
+
+            // 发送完整状态
+            apiPost('/api/config', {
+                allow_all: allowAll,
+                tags: tags
             });
         }
-        loadSensitive();
-        function addSensitive() { 
-            const w = document.getElementById('newSensitive').value;
-            if(w) { apiPost('/api/config', { add_sensitive: w }); document.getElementById('newSensitive').value=""; setTimeout(loadSensitive,500); }
+
+        // 敏感词相关
+        // 【修改】加载初始配置 (Sync UI)
+        // 页面加载时调用一次 fetch，把后端的状态同步到前端 Checkbox
+        function loadConfigState() {
+            fetch('/api/config').then(r => r.json()).then(d => {
+                // 1. 恢复敏感词
+                const div = document.getElementById('sensitiveList'); div.innerHTML = "";
+                d.sensitive_words.forEach(w => {
+                    const s = document.createElement('span'); s.className = "badge"; s.innerHTML = `${w} ×`;
+                    s.onclick = () => removeSensitive(w); div.appendChild(s);
+                });
+
+                // 2. 【新增】恢复 allow_all 状态
+                const cbAll = document.getElementById('cb_all');
+                cbAll.checked = d.allow_all;
+
+                // 3. 触发一次 toggleAll 来设置 UI 的禁用状态 (但不发送请求，避免死循环)
+                const items = document.querySelectorAll('.pos-item');
+                items.forEach(cb => {
+                    cb.disabled = d.allow_all;
+                    cb.parentElement.style.opacity = d.allow_all ? "0.5" : "1";
+                });
+                // 注意：这里不需要设置具体的 tags checkbox，因为我们没有回传 tags list
+                // 如果你需要完全同步，后端 GET /api/config 也需要回传 current_tags
+                // 但通常 checkbox 状态保留在浏览器当前会话就够了，或者你可以让 GET 接口完善一点。
+            });
         }
-        function removeSensitive(w) { 
-            if(confirm("Remove "+w+"?")) { apiPost('/api/config', { remove_sensitive: w }); setTimeout(loadSensitive,500); }
+        // 初始化时调用 (替换原来的 loadSensitive)
+        loadConfigState();
+        // ... addSensitive/removeSensitive 修改为调用 loadConfigState 或局部刷新 ...
+        function addSensitive() {
+            const w = document.getElementById('newSensitive').value;
+            if (w) {
+                apiPost('/api/config', { add_sensitive: w });
+                document.getElementById('newSensitive').value = "";
+                setTimeout(loadConfigState, 500); // 刷新列表
+            }
+        }
+        function removeSensitive(w) {
+            if (confirm("Remove " + w + "?")) {
+                apiPost('/api/config', { remove_sensitive: w });
+                setTimeout(loadConfigState, 500); // 刷新列表
+            }
         }
 
         // 历史相关
@@ -274,8 +576,8 @@
             const e = document.getElementById('histEnd').value;
             log(`Loading History...`);
             document.getElementById('windowInfo').innerText = `MODE: HISTORY [${s} ~ ${e}]`;
-            fetch(`/api/history_view?start=${s}&end=${e}`).then(r=>r.json()).then(d => {
-                myChart.setOption({ xAxis: {data:d.categories}, series: [{data:d.values, itemStyle:{color:'#8b5cf6'}}] });
+            fetch(`/api/history_view?start=${s}&end=${e}`).then(r => r.json()).then(d => {
+                myChart.setOption({ xAxis: { data: d.categories }, series: [{ data: d.values, itemStyle: { color: '#8b5cf6' } }] });
             });
         }
         function backToRealtime() {
@@ -286,12 +588,12 @@
 
         // 统计与报告 (新功能)
         function showStats() {
-            fetch('/api/stats').then(r=>r.json()).then(d => {
-                document.getElementById('st_time').innerText = d.runtime.toFixed(2)+" s";
+            fetch('/api/stats').then(r => r.json()).then(d => {
+                document.getElementById('st_time').innerText = d.runtime.toFixed(2) + " s";
                 document.getElementById('st_lines').innerText = d.lines;
                 document.getElementById('st_words').innerText = d.words;
                 document.getElementById('st_qps').innerText = d.qps.toFixed(2);
-                document.getElementById('st_mem').innerText = d.memory.toFixed(2)+" MB";
+                document.getElementById('st_mem').innerText = d.memory.toFixed(2) + " MB";
                 document.getElementById('statsModal').style.display = 'flex';
             });
         }
@@ -306,13 +608,13 @@
 
         // 系统操作
         function runBench() { apiPost('/api/command', { cmd: `[ACTION] BENCHMARK N=${document.getElementById('benchN').value}` }); }
-        
+
         function resetSystem() {
-            if(!confirm("⚠️ 警告：这将清空所有内存数据和历史日志文件！")) return;
-            
+            if (!confirm("⚠️ 警告：这将清空所有内存数据和历史日志文件！")) return;
+
             // 1. 发送命令清空后端 (内存 + 文件)
             apiPost('/api/command', { cmd: `[ACTION] RESET` });
-            
+
             // 2. 立即清空前端状态
             isHistoryMode = false;
             myChart.setOption({ xAxis: { data: [] }, series: [{ data: [], itemStyle: { color: '#3b82f6' } }] });
@@ -320,6 +622,9 @@
             document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
             log("System & Log Cleared.");
         }
+
+
     </script>
 </body>
+
 </html>

@@ -20,6 +20,8 @@ private:
     unordered_set<string> sensitiveWords; // 新增：敏感词集合
     unordered_set<string> allowedTags;    // 新增：允许的词性集合
 
+    bool allowAllTags = false; // 【新增】是否允许所有词性
+
     mutable mutex mtx; // 【新增】互斥锁，保护配置修改
 
 public:
@@ -35,21 +37,31 @@ public:
             loadSet(sensitiveWords, sensitive_path);
         }
 
-        // 【新增】定义允许的词性
-        // n: 名词 (各种变体)
-        // v: 动词 (vn: 名动词, vd: 副动词)
-        // a: 形容词 (an: 名形词)
-        // nz: 其他专名 (这是重点！很多组合词都在这里)
-        // l: 习语/成语
-        // i: 成语
-        // eng: 英文
-        allowedTags = {
-            "n", "ns", "nr", "nt", "nz", "nl", "ng",  // 各种名词
-            "v", "vd", "vn",                          // 各种动词
-            "a", "an",                                // 形容词
-            "l", "i",                                 // 习语、成语
-            "eng", "x"                                // 英文、其他
-        }; 
+        // 定义允许的词性
+        // 默认配置
+        allowedTags = { "n", "ns", "nr", "nt", "nz", "v", "vn", "a", "eng" }; 
+        allowAllTags = false; 
+    }
+
+    // 【修改】统一设置词性配置 (支持 allowAll)
+    void setPosConfig(const vector<string>& tags, bool allowAll) {
+        lock_guard<mutex> lock(mtx);
+        allowedTags.clear();
+        for(const auto& t : tags) allowedTags.insert(t);
+        allowAllTags = allowAll;
+        cout << "[Config] POS tags updated. AllowAll=" << allowAllTags << endl;
+    }
+    
+    // 【新增】获取当前 allowAll 状态 (供 API 回显)
+    bool isAllowAll() {
+        lock_guard<mutex> lock(mtx);
+        return allowAllTags;
+    }
+
+    // 辅助：获取当前敏感词列表
+    vector<string> getSensitiveWords() {
+        lock_guard<mutex> lock(mtx);
+        return vector<string>(sensitiveWords.begin(), sensitiveWords.end());
     }
 
     // 【新增需求2】动态更新允许的词性
@@ -69,13 +81,7 @@ public:
     void removeSensitiveWord(const string& word) {
         lock_guard<mutex> lock(mtx);
         sensitiveWords.erase(word);
-    }
-    
-    // 【辅助】获取当前敏感词列表（供前端回显）
-    vector<string> getSensitiveWords() {
-        lock_guard<mutex> lock(mtx);
-        return vector<string>(sensitiveWords.begin(), sensitiveWords.end());
-    }
+    }    
 
     vector<string> process(const string& sentence) {
         // process 函数会被频繁调用，需要加锁保护读取配置
@@ -84,10 +90,12 @@ public:
         
         unordered_set<string> currentSensitive;
         unordered_set<string> currentTags;
+        bool useAllTags = false;
         {
             lock_guard<mutex> lock(mtx);
             currentSensitive = sensitiveWords;
             currentTags = allowedTags;
+            useAllTags = allowAllTags; // 读取标志位
         }
 
         // 在分词前，先进行清洗和标准化
@@ -110,14 +118,14 @@ public:
             const string& tag = pair.second;
 
             // 过滤逻辑：
-            // 1. 不在停用词表
-            // 2. 不在敏感词表
-            // 3. 词性必须在白名单内 (例如只保留名词)
-            // 4. 长度大于1 (过滤单个字)
-            // 使用局部副本进行判断
+            // 1. 不在停用词表 AND 不在敏感词表
+            // 2. AND (允许所有词性 OR 词性在白名单中)
+            // 3. AND 长度 > 1
+            bool isPosAllowed = useAllTags || (currentTags.count(tag) > 0);
+
             if (stopWords.find(word) == stopWords.end() && 
                 currentSensitive.find(word) == currentSensitive.end() && 
-                currentTags.count(tag) > 0 && 
+                isPosAllowed && 
                 word.size() > 1) { 
                 final_words.push_back(word);
             }

@@ -252,12 +252,22 @@ void startServer(int port) {
         }
     });
 
-    // 2. GET Main Data (升级：返回窗口范围)
-    svr.Get("/api/data", [&](const httplib::Request&, httplib::Response& res) {
-        auto topList = g_window->getTopK(10);
-        auto range = g_window->getWindowRange(); // 获取范围
-        long long retention = g_window->getMaxRetention(); // 获取当前值
-        
+    // 2. GET 数据接口 (支持动态 K)
+    svr.Get("/api/data", [&](const httplib::Request& req, httplib::Response& res) {
+        // 默认显示 10 个，如果前端传了 k 就用前端的
+        int k = 10;
+        if (req.has_param("k")) {
+            try {
+                k = stoi(req.get_param_value("k"));
+                if (k <= 0) k = 1;      // 最小显示1个
+                if (k > 100) k = 100;   // 限制最大显示100个，防止页面卡顿
+            } catch (...) {}
+        }
+
+        auto topList = g_window->getTopK(k);
+        auto range = g_window->getWindowRange();
+        long long retention = g_window->getMaxRetention(); 
+
         json j;
         vector<string> cats;
         vector<int> vals;
@@ -268,11 +278,10 @@ void startServer(int port) {
         j["categories"] = cats;
         j["values"] = vals;
         
-        // 【需求1】返回时间范围
         j["window_start"] = formatTime(range.first);
         j["window_end"] = formatTime(range.second);
         j["current_ts"] = formatTime(g_lastTimestamp);
-        j["retention_sec"] = retention; // 新增字段
+        j["retention_sec"] = retention;
 
         res.set_header("Access-Control-Allow-Origin", "*");
         res.set_content(j.dump(), "application/json");
@@ -321,6 +330,7 @@ void startServer(int port) {
     svr.Get("/api/config", [&](const httplib::Request&, httplib::Response& res) {
         json j;
         j["sensitive_words"] = g_processor->getSensitiveWords();
+        j["allow_all"] = g_processor->isAllowAll(); // 【新增】回传状态
         // 简单起见，这里就不回传 allowedTags 了，仅回传敏感词
         res.set_content(j.dump(), "application/json");
     });
@@ -329,10 +339,28 @@ void startServer(int port) {
         try {
             auto j = json::parse(req.body);
             
-            // 修改词性
-            if (j.contains("tags")) {
-                vector<string> tags = j["tags"].get<vector<string>>();
-                g_processor->setAllowedTags(tags);
+            // 【修改】处理词性配置 (同时接收 tags 和 allow_all)
+            // 只要传了 tags 或者 allow_all 任意一个，就更新配置
+            if (j.contains("tags") || j.contains("allow_all")) {
+                vector<string> tags;
+                bool allowAll = false;
+
+                // 尝试获取 tags
+                if (j.contains("tags")) {
+                    tags = j["tags"].get<vector<string>>();
+                }
+                
+                // 尝试获取 allow_all (如果是单独发送的请求，需要保持 TextProcessor 内部状态吗？
+                // 为了简单，建议前端每次都把完整状态发过来。这里我们假设前端会发 allow_all)
+                if (j.contains("allow_all")) {
+                    allowAll = j["allow_all"];
+                } else {
+                    // 如果没传，默认 false 或者需要去 query 现有状态。
+                    // 简化策略：前端每次变动都必须传 allow_all
+                    allowAll = g_processor->isAllowAll(); 
+                }
+
+                g_processor->setPosConfig(tags, allowAll);
             }
 
             // 添加敏感词
