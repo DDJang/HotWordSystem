@@ -28,6 +28,8 @@ SlidingWindow* g_window = nullptr;
 PersistenceManager* g_persistence = nullptr;
 PerformanceMonitor* g_monitor = nullptr;
 
+long long g_lastTimestamp = 0; // 【新增需求5】记录最后一次的时间戳
+
 // 正则预编译
 regex timeRegex(R"(\[(\d{2}:\d{2}:\d{2})\]\s*(.*))");
 regex benchRegex(R"(\[ACTION\]\s*BENCHMARK\s*N=(\d+))");
@@ -36,12 +38,23 @@ regex historyRegex(R"(\[ACTION\]\s*HISTORY\s*START=(\d{2}:\d{2}:\d{2})\s*END=(\d
 regex resetRegex(R"(\[ACTION\]\s*RESET)"); 
 regex trendRegex(R"(\[ACTION\]\s*TREND\s*K=(\d+))"); 
 regex queryRegex(R"(\[ACTION\]\s*QUERY\s*K=(\d+))"); 
+regex retentionRegex(R"(\[ACTION\]\s*SET_RETENTION\s*R=(\d+))");
 
 // 辅助：解析时间
 long long parseTimeSeconds(const string& timeStr) {
     int h, m, s;
     if (sscanf(timeStr.c_str(), "%d:%d:%d", &h, &m, &s) == 3) return h * 3600 + m * 60 + s;
     return 0;
+}
+
+// 辅助：秒转时间字符串 (seconds -> HH:MM:SS)
+string formatTime(long long totalSeconds) {
+    int h = (totalSeconds / 3600) % 24;
+    int m = (totalSeconds / 60) % 60;
+    int s = totalSeconds % 60;
+    char buf[16];
+    sprintf(buf, "%02d:%02d:%02d", h, m, s);
+    return string(buf);
 }
 
 // 辅助：生成随机句子
@@ -62,17 +75,32 @@ string processCommand(const string& line) {
     smatch match;
     stringstream result;
 
-    // 1. 数据输入 [00:00:00] ...
+    // 1. 数据输入处理 (逻辑升级)
     if (regex_search(line, match, timeRegex)) {
+        // Case A: 带有明确时间戳 [12:00:01] 华为...
         long long ts = parseTimeSeconds(match[1].str());
         string content = match[2].str();
-        vector<string> words = g_processor->process(content);
         
+        // 更新全局时钟
+        if (ts > g_lastTimestamp) g_lastTimestamp = ts;
+
+        vector<string> words = g_processor->process(content);
+        g_window->addData(ts, words);
+        g_persistence->logData(ts, words);
+        g_monitor->record(words.size());
+        result << "Data(T=" << ts << ") processed: " << words.size() << " words.";
+    }
+    // 【新增需求5】Case B: 没有时间戳，自动 +1
+    else if (line.find("[ACTION]") == string::npos && !line.empty()) {
+        g_lastTimestamp++; // 自动递增
+        long long ts = g_lastTimestamp;
+        
+        vector<string> words = g_processor->process(line); // 这里的 line 就是内容
         g_window->addData(ts, words);
         g_persistence->logData(ts, words);
         g_monitor->record(words.size());
         
-        result << "Data received: " << words.size() << " words processed.";
+        result << "Data(Auto T=" << formatTime(ts) << ") processed: " << words.size() << " words.";
     }
 
     // 2. 设置窗口
@@ -85,36 +113,23 @@ string processCommand(const string& line) {
     // 3. 压测
     else if (regex_search(line, match, benchRegex)) {
         int n = stoi(match[1].str());
-        
-        // 开线程跑压测
         thread([n](){
-            // 【注意这里】设定压测起始时间
-            // 为了方便你生成报告，我们把它改成从 00:00:00 (0秒) 开始
-            long long ts = 0; 
-            
+            // 压测基于当前最后时间继续
+            long long startTs = g_lastTimestamp; 
             g_monitor->reset();
             
             for(int i=0; i<n; i++) {
-                ts++; // 时间每条递增 1秒
-                
-                // 生成并处理数据
+                startTs++; 
+                // ... process ...
                 vector<string> words = g_processor->process(generateRandomSentence());
-                
-                // 1. 写入滑动窗口 (内存)
-                g_window->addData(ts, words);
-                
-                // 2. 【关键修复】写入持久化日志 (磁盘)
-                g_persistence->logData(ts, words); 
-                
-                // 3. 记录性能
+                g_window->addData(startTs, words);
+                g_persistence->logData(startTs, words);
                 g_monitor->record(words.size());
             }
-            // 压测结束后，自动打印报告到控制台
-            cout << "[System] Benchmark finished. Data written to history.log" << endl;
-            g_monitor->printStats();
+            g_lastTimestamp = startTs; // 更新全局时间
+            cout << "[System] Benchmark finished." << endl;
         }).detach();
-        
-        result << "Benchmark started for " << n << " items (Writing to disk...)";
+        result << "Benchmark started (Append mode).";
     }
 
     // 4. 查看性能统计指令
@@ -143,8 +158,8 @@ string processCommand(const string& line) {
         // 2. 重置监控指标
         g_monitor->reset();
         
-        // 3. (可选) 如果你想连日志文件也清空，可以重新打开一下
-        // ofstream ofs("data/history.log", ios::trunc); 
+        // 3. 【新增】清空持久化日志 (磁盘 - 物理文件)
+        g_persistence->clearLog();
         
         result << "System State Reset Successfully. (Window cleared, Time reset)";
     }
@@ -192,7 +207,14 @@ string processCommand(const string& line) {
         }
     }
 
-    // 9. 其他未知指令
+    // 9.新增指令处理逻辑
+    else if (regex_search(line, match, retentionRegex)) {
+        long long r = stoll(match[1].str());
+        g_window->setMaxRetention(r);
+        result << "Max retention time set to " << r << " seconds.";
+    }
+
+    // 10. 其他未知指令
     else {
         result << "Unknown command or invalid format.";
     }
@@ -230,9 +252,12 @@ void startServer(int port) {
         }
     });
 
-    // 2. GET 数据接口 (用于图表刷新)
+    // 2. GET Main Data (升级：返回窗口范围)
     svr.Get("/api/data", [&](const httplib::Request&, httplib::Response& res) {
         auto topList = g_window->getTopK(10);
+        auto range = g_window->getWindowRange(); // 获取范围
+        long long retention = g_window->getMaxRetention(); // 获取当前值
+        
         json j;
         vector<string> cats;
         vector<int> vals;
@@ -242,6 +267,13 @@ void startServer(int port) {
         }
         j["categories"] = cats;
         j["values"] = vals;
+        
+        // 【需求1】返回时间范围
+        j["window_start"] = formatTime(range.first);
+        j["window_end"] = formatTime(range.second);
+        j["current_ts"] = formatTime(g_lastTimestamp);
+        j["retention_sec"] = retention; // 新增字段
+
         res.set_header("Access-Control-Allow-Origin", "*");
         res.set_content(j.dump(), "application/json");
     });
@@ -283,6 +315,80 @@ void startServer(int port) {
         
         res.set_header("Access-Control-Allow-Origin", "*");
         res.set_content(j.dump(), "application/json");
+    });
+
+    // 5. 【需求2】配置接口 (GET 获取配置, POST 修改配置)
+    svr.Get("/api/config", [&](const httplib::Request&, httplib::Response& res) {
+        json j;
+        j["sensitive_words"] = g_processor->getSensitiveWords();
+        // 简单起见，这里就不回传 allowedTags 了，仅回传敏感词
+        res.set_content(j.dump(), "application/json");
+    });
+
+    svr.Post("/api/config", [&](const httplib::Request& req, httplib::Response& res) {
+        try {
+            auto j = json::parse(req.body);
+            
+            // 修改词性
+            if (j.contains("tags")) {
+                vector<string> tags = j["tags"].get<vector<string>>();
+                g_processor->setAllowedTags(tags);
+            }
+
+            // 添加敏感词
+            if (j.contains("add_sensitive")) {
+                string w = j["add_sensitive"];
+                g_processor->addSensitiveWord(w);
+            }
+
+            // 删除敏感词
+            if (j.contains("remove_sensitive")) {
+                string w = j["remove_sensitive"];
+                g_processor->removeSensitiveWord(w);
+            }
+
+            res.set_content("{\"status\":\"ok\"}", "application/json");
+        } catch(...) { res.status = 400; }
+    });
+
+    // 6. 【需求3】历史数据查询
+    svr.Get("/api/history_view", [&](const httplib::Request& req, httplib::Response& res) {
+        string sStart = req.get_param_value("start");
+        string sEnd = req.get_param_value("end");
+        
+        long long tStart = parseTimeSeconds(sStart);
+        long long tEnd = parseTimeSeconds(sEnd);
+
+        // 查询持久化层
+        auto list = g_persistence->queryHistoryTopK(tStart, tEnd, 10);
+
+        json j;
+        vector<string> cats;
+        vector<int> vals;
+        for(auto& p : list) {
+            cats.push_back(p.first);
+            vals.push_back(p.second);
+        }
+        j["categories"] = cats;
+        j["values"] = vals;
+        res.set_content(j.dump(), "application/json");
+    });
+
+    // 7. 【需求4】趋势分析接口
+    svr.Get("/api/trends", [&](const httplib::Request& req, httplib::Response& res) {
+        int k = 10;
+        if (req.has_param("k")) k = stoi(req.get_param_value("k"));
+
+        auto trends = g_window->getTrendingWords(k);
+
+        json list = json::array();
+        for(auto& p : trends) {
+            json item;
+            item["word"] = p.first;
+            item["score"] = p.second; // 斜率/增量
+            list.push_back(item);
+        }
+        res.set_content(list.dump(), "application/json");
     });
 
     cout << "[Web] GUI Server running at http://localhost:" << port << endl;

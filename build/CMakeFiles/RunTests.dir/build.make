@@ -71,29 +71,29 @@ include CMakeFiles/RunTests.dir/flags.make
 CMakeFiles/RunTests.dir/codegen:
 .PHONY : CMakeFiles/RunTests.dir/codegen
 
-CMakeFiles/RunTests.dir/src/test_main.cpp.obj: CMakeFiles/RunTests.dir/flags.make
-CMakeFiles/RunTests.dir/src/test_main.cpp.obj: CMakeFiles/RunTests.dir/includes_CXX.rsp
-CMakeFiles/RunTests.dir/src/test_main.cpp.obj: D:/cppRepositories/HotWordSystem/src/test_main.cpp
-CMakeFiles/RunTests.dir/src/test_main.cpp.obj: CMakeFiles/RunTests.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=D:\cppRepositories\HotWordSystem\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/RunTests.dir/src/test_main.cpp.obj"
-	D:\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/RunTests.dir/src/test_main.cpp.obj -MF CMakeFiles\RunTests.dir\src\test_main.cpp.obj.d -o CMakeFiles\RunTests.dir\src\test_main.cpp.obj -c D:\cppRepositories\HotWordSystem\src\test_main.cpp
+CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj: CMakeFiles/RunTests.dir/flags.make
+CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj: CMakeFiles/RunTests.dir/includes_CXX.rsp
+CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj: D:/cppRepositories/HotWordSystem/test/unittest/test_main.cpp
+CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj: CMakeFiles/RunTests.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=D:\cppRepositories\HotWordSystem\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj"
+	D:\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj -MF CMakeFiles\RunTests.dir\test\unittest\test_main.cpp.obj.d -o CMakeFiles\RunTests.dir\test\unittest\test_main.cpp.obj -c D:\cppRepositories\HotWordSystem\test\unittest\test_main.cpp
 
-CMakeFiles/RunTests.dir/src/test_main.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/RunTests.dir/src/test_main.cpp.i"
-	D:\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E D:\cppRepositories\HotWordSystem\src\test_main.cpp > CMakeFiles\RunTests.dir\src\test_main.cpp.i
+CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.i"
+	D:\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E D:\cppRepositories\HotWordSystem\test\unittest\test_main.cpp > CMakeFiles\RunTests.dir\test\unittest\test_main.cpp.i
 
-CMakeFiles/RunTests.dir/src/test_main.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/RunTests.dir/src/test_main.cpp.s"
-	D:\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S D:\cppRepositories\HotWordSystem\src\test_main.cpp -o CMakeFiles\RunTests.dir\src\test_main.cpp.s
+CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.s"
+	D:\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S D:\cppRepositories\HotWordSystem\test\unittest\test_main.cpp -o CMakeFiles\RunTests.dir\test\unittest\test_main.cpp.s
 
 # Object files for target RunTests
 RunTests_OBJECTS = \
-"CMakeFiles/RunTests.dir/src/test_main.cpp.obj"
+"CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj"
 
 # External object files for target RunTests
 RunTests_EXTERNAL_OBJECTS =
 
-RunTests.exe: CMakeFiles/RunTests.dir/src/test_main.cpp.obj
+RunTests.exe: CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj
 RunTests.exe: CMakeFiles/RunTests.dir/build.make
 RunTests.exe: CMakeFiles/RunTests.dir/linkLibs.rsp
 RunTests.exe: CMakeFiles/RunTests.dir/objects1.rsp

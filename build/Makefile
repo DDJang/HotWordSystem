@@ -165,29 +165,29 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\HotWordSystem.dir\build.make CMakeFiles/HotWordSystem.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
-src/test_main.obj: src/test_main.cpp.obj
-.PHONY : src/test_main.obj
+test/unittest/test_main.obj: test/unittest/test_main.cpp.obj
+.PHONY : test/unittest/test_main.obj
 
 # target to build an object file
-src/test_main.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\RunTests.dir\build.make CMakeFiles/RunTests.dir/src/test_main.cpp.obj
-.PHONY : src/test_main.cpp.obj
+test/unittest/test_main.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\RunTests.dir\build.make CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj
+.PHONY : test/unittest/test_main.cpp.obj
 
-src/test_main.i: src/test_main.cpp.i
-.PHONY : src/test_main.i
+test/unittest/test_main.i: test/unittest/test_main.cpp.i
+.PHONY : test/unittest/test_main.i
 
 # target to preprocess a source file
-src/test_main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\RunTests.dir\build.make CMakeFiles/RunTests.dir/src/test_main.cpp.i
-.PHONY : src/test_main.cpp.i
+test/unittest/test_main.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\RunTests.dir\build.make CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.i
+.PHONY : test/unittest/test_main.cpp.i
 
-src/test_main.s: src/test_main.cpp.s
-.PHONY : src/test_main.s
+test/unittest/test_main.s: test/unittest/test_main.cpp.s
+.PHONY : test/unittest/test_main.s
 
 # target to generate assembly for a file
-src/test_main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\RunTests.dir\build.make CMakeFiles/RunTests.dir/src/test_main.cpp.s
-.PHONY : src/test_main.cpp.s
+test/unittest/test_main.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\RunTests.dir\build.make CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.s
+.PHONY : test/unittest/test_main.cpp.s
 
 # Help Target
 help:
@@ -202,9 +202,9 @@ help:
 	@echo ... src/main.obj
 	@echo ... src/main.i
 	@echo ... src/main.s
-	@echo ... src/test_main.obj
-	@echo ... src/test_main.i
-	@echo ... src/test_main.s
+	@echo ... test/unittest/test_main.obj
+	@echo ... test/unittest/test_main.i
+	@echo ... test/unittest/test_main.s
 .PHONY : help
 
 

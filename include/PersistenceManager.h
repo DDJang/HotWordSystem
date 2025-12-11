@@ -106,6 +106,54 @@ public:
         writeReportToFile(reportData, outputPath, timeStep);
     }
 
+    // 【新增需求3】查询历史区间的聚合 Top-K，直接返回数据给 Web API
+    vector<pair<string, int>> queryHistoryTopK(long long startTime, long long endTime, int k) {
+        ifstream ifs(logFilePath);
+        unordered_map<string, int> counts;
+        string line;
+
+        if (!ifs.is_open()) return {};
+
+        while (getline(ifs, line)) {
+            if (line.empty()) continue;
+            size_t delimPos = line.find('|');
+            if (delimPos == string::npos) continue;
+
+            long long ts = 0;
+            try {
+                ts = stoll(line.substr(0, delimPos));
+            } catch(...) { continue; }
+            
+            // 过滤时间
+            if (ts < startTime || ts > endTime) continue;
+
+            // 统计词频
+            string content = line.substr(delimPos + 1);
+            stringstream ss(content);
+            string word;
+            while (getline(ss, word, ',')) {
+                if (!word.empty()) counts[word]++;
+            }
+        }
+
+        // 排序取 Top-K
+        vector<pair<string, int>> sortedWords(counts.begin(), counts.end());
+        sort(sortedWords.begin(), sortedWords.end(), [](const auto& a, const auto& b){
+            return a.second > b.second;
+        });
+
+        if (sortedWords.size() > k) sortedWords.resize(k);
+        return sortedWords;
+    }
+
+    // 【新增】清空日志文件
+    void clearLog() {
+        // ios::trunc 模式打开文件，会将文件长度截断为 0，即清空内容
+        ofstream ofs(logFilePath, ios::trunc); 
+        ofs.close();
+        cout << "[System] History log file cleared." << endl;
+    }
+
 private:
     void writeReportToFile(const map<long long, unordered_map<string, int>>& data, const string& path, int step) {
         ofstream ofs(path);

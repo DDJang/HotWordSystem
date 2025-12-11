@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <mutex> // 新增锁
 #include "cppjieba/Jieba.hpp"
 #include "utf8.h"
 
@@ -18,6 +19,8 @@ private:
     unordered_set<string> stopWords;
     unordered_set<string> sensitiveWords; // 新增：敏感词集合
     unordered_set<string> allowedTags;    // 新增：允许的词性集合
+
+    mutable mutex mtx; // 【新增】互斥锁，保护配置修改
 
 public:
     TextProcessor(const string& dict_path, const string& hmm_path, 
@@ -49,7 +52,44 @@ public:
         }; 
     }
 
+    // 【新增需求2】动态更新允许的词性
+    void setAllowedTags(const vector<string>& tags) {
+        lock_guard<mutex> lock(mtx);
+        allowedTags.clear();
+        for(const auto& t : tags) allowedTags.insert(t);
+        cout << "[Config] Allowed POS tags updated." << endl;
+    }
+
+    // 【新增需求2】动态管理敏感词
+    void addSensitiveWord(const string& word) {
+        lock_guard<mutex> lock(mtx);
+        sensitiveWords.insert(word);
+    }
+
+    void removeSensitiveWord(const string& word) {
+        lock_guard<mutex> lock(mtx);
+        sensitiveWords.erase(word);
+    }
+    
+    // 【辅助】获取当前敏感词列表（供前端回显）
+    vector<string> getSensitiveWords() {
+        lock_guard<mutex> lock(mtx);
+        return vector<string>(sensitiveWords.begin(), sensitiveWords.end());
+    }
+
     vector<string> process(const string& sentence) {
+        // process 函数会被频繁调用，需要加锁保护读取配置
+        // 注意：分词本身耗时较长，最好只在读取 set 时加锁，或者复制一份 set 使用
+        // 这里为了代码简单，直接在关键判断处用锁不太现实，建议复制配置
+        
+        unordered_set<string> currentSensitive;
+        unordered_set<string> currentTags;
+        {
+            lock_guard<mutex> lock(mtx);
+            currentSensitive = sensitiveWords;
+            currentTags = allowedTags;
+        }
+
         // 在分词前，先进行清洗和标准化
         string clean_sentence = sanitizeAndNormalize(sentence);
 
@@ -74,11 +114,11 @@ public:
             // 2. 不在敏感词表
             // 3. 词性必须在白名单内 (例如只保留名词)
             // 4. 长度大于1 (过滤单个字)
+            // 使用局部副本进行判断
             if (stopWords.find(word) == stopWords.end() && 
-                sensitiveWords.find(word) == sensitiveWords.end() && 
-                allowedTags.count(tag) > 0 && 
-                word.size() > 1) { // 简单过滤单个字符
-                
+                currentSensitive.find(word) == currentSensitive.end() && 
+                currentTags.count(tag) > 0 && 
+                word.size() > 1) { 
                 final_words.push_back(word);
             }
         }
@@ -149,11 +189,4 @@ private:
         }
     }
 
-    // bool isSpecialChar(const string& w) {
-    //     if (w.size() == 1) {
-    //         char c = w[0];
-    //         if (!isalnum(c)) return true;
-    //     }
-    //     return false;
-    // }
 };

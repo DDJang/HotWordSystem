@@ -1,372 +1,325 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
-    <title>热词监控与控制中心</title>
+    <title>热词监控与控制中心 V2.2</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
-        :root {
-            --primary: #2563eb;
-            --bg: #f3f4f6;
-            --card: #ffffff;
+        :root { --primary: #2563eb; --bg: #f3f4f6; --card: #ffffff; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; gap: 20px; padding: 20px; height: 95vh; box-sizing: border-box; }
+        
+        .left-col { flex: 2; display: flex; flex-direction: column; gap: 20px; }
+        .right-col { flex: 1; background: var(--card); border-radius: 12px; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+
+        .card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .chart-box { flex: 1; min-height: 300px; }
+        
+        h2 { margin-top: 0; color: #1f2937; margin-bottom: 10px; font-size: 20px; }
+        h3 { font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin: 0 0 10px 0; color: #4b5563; font-weight: 700; }
+
+        .control-group { border: 1px solid #f3f4f6; padding: 10px; border-radius: 8px; background: #fafafa; }
+
+        input, button, textarea { width: 100%; padding: 6px 10px; margin-bottom: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; font-size: 13px; }
+        button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; padding: 8px; }
+        button:hover { opacity: 0.9; }
+        button.secondary { background: #6b7280; }
+        button.danger { background: #dc2626; }
+        button.success { background: #059669; }
+        
+        .dual-input { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
+        .dual-input label { font-size: 12px; color: #666; width: 55px; flex-shrink: 0; }
+        .row { display: flex; gap: 8px; }
+
+        .tag-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 5px; }
+        .tag-check { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { text-align: left; padding: 6px; border-bottom: 1px solid #eee; }
+        th { color: #666; font-weight: normal; }
+        .trend-up { color: #dc2626; font-weight: bold; }
+        .trend-down { color: #059669; font-weight: bold; }
+
+        .badge { background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 10px; font-size: 11px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+
+        #windowInfo { font-size: 14px; color: #666; font-family: monospace; }
+        
+        #log { 
+            font-family: 'Consolas', monospace; font-size: 12px; color: #10b981; 
+            background: #1f2937; padding: 10px; border-radius: 6px; 
+            min-height: 40px; max-height: 80px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 0;
         }
 
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg);
-            display: flex;
-            gap: 20px;
-            padding: 20px;
-            height: 90vh;
-        }
-
-        /* 左侧图表区 */
-        .chart-section {
-            flex: 2;
-            background: var(--card);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
-        }
-
-        #main {
-            flex: 1;
-            width: 100%;
-        }
-
-        /* 右侧控制区 */
-        .control-section {
-            flex: 1;
-            background: var(--card);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            overflow-y: auto;
-        }
-
-        h2 {
-            margin-top: 0;
-            color: #1f2937;
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 10px;
-        }
-
-        .group {
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f9fafb;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
-        }
-
-        .group h3 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
-            color: #4b5563;
-        }
-
-        input,
-        textarea {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            box-sizing: border-box;
-        }
-
-        button {
-            width: 100%;
-            padding: 10px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.2s;
-        }
-
-        button:hover {
-            opacity: 0.9;
-        }
-
-        button.danger {
-            background: #dc2626;
-        }
-
-        #log {
-            margin-top: 10px;
-            font-family: monospace;
-            font-size: 12px;
-            color: #059669;
-            white-space: pre-wrap;
-        }
-
-        /* 弹窗遮罩层 */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* 弹窗主体 */
-        .modal-content {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            width: 400px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            animation: popIn 0.3s ease;
-        }
-
-        /* 统计表格样式 */
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px dashed #eee;
-        }
-
-        .stat-label {
-            color: #666;
-        }
-
-        .stat-value {
-            font-weight: bold;
-            color: #2563eb;
-            font-family: monospace;
-            font-size: 1.1em;
-        }
-
-        @keyframes popIn {
-            from {
-                transform: scale(0.8);
-                opacity: 0;
-            }
-
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
+        /* 弹窗样式 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.3s ease; }
+        .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
+        .stat-val { font-weight: bold; color: var(--primary); font-family: monospace; }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
-
 <body>
 
-    <!-- 左侧：图表 -->
-    <div class="chart-section">
-        <h2>🔥 实时热词排行榜</h2>
-        <div id="main"></div>
+    <div class="left-col">
+        <div class="card chart-box">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>🔥 实时热词榜</h2>
+                <div id="windowInfo">Window: [Wait...]</div>
+            </div>
+            <div id="mainChart" style="width:100%; height:90%;"></div>
+        </div>
+
+        <div class="card" style="flex: 1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                <h2 style="margin:0;">📈 趋势分析</h2>
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <span style="font-size:12px; color:#666;">阈值:</span>
+                    <input type="number" id="trendThreshold" value="2" style="width:60px; margin:0;">
+                </div>
+            </div>
+            <div style="overflow-y: auto; height: 80%;">
+                <table>
+                    <thead><tr><th>#</th><th>热词</th><th>趋势分</th><th>状态</th></tr></thead>
+                    <tbody id="trendBody"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
-    <!-- 右侧：控制面板 -->
-    <div class="control-section">
-        <h2>🎮 控制台</h2>
-
-        <!-- 反馈日志 -->
-        <div class="group">
-            <h3>📟 系统反馈</h3>
-            <div id="log">Ready...</div>
-        </div>
-
-        <!-- 1. 数据录入 -->
-        <div class="group">
-            <h3>📝 模拟数据输入</h3>
-            <textarea id="dataInput" rows="3" placeholder="[00:00:10] 华为 发布 新手机..."></textarea>
-            <button onclick="sendManualData()">发送数据</button>
-        </div>
-
-        <!-- 2. 窗口配置 -->
-        <div class="group">
-            <h3>⚙️ 窗口设置</h3>
-            <div style="display:flex; gap:5px;">
-                <input type="number" id="windowSize" placeholder="秒 (如 600)" value="600">
-                <button onclick="setWindow()" style="width: auto;">应用</button>
-            </div>
-        </div>
-
-        <!-- 3. 压力测试 -->
-        <div class="group">
-            <h3>⚡ 性能压测</h3>
-            <input type="number" id="benchCount" value="5000" placeholder="数量">
-
-            <div style="display: flex; gap: 5px;">
-                <button class="danger" onclick="runBenchmark()">启动压测</button>
-                <!-- 【新增】查看报告按钮 -->
-                <button onclick="showStats()" style="background:#4b5563;">查看报告</button>
-            </div>
-        </div>
-
-        <!-- 4. 历史报告 -->
-        <div class="group">
-            <h3>📂 历史报告生成</h3>
-            <input type="text" id="histStart" placeholder="开始: 00:00:00" value="00:00:00">
-            <input type="text" id="histEnd" placeholder="结束: 02:00:00" value="02:00:00">
-            <button onclick="genHistory()">生成报告</button>
-        </div>
-
-        <!-- 5. 系统管理 -->
-        <div class="group" style="border-color: #fca5a5; background: #fef2f2;">
-            <h3 style="color: #b91c1c;">🚨 系统管理</h3>
-            <button class="danger" onclick="resetSystem()">♻️ 清空所有数据 (Reset)</button>
-        </div>
-
+    <div class="right-col">
+        <h2 style="margin-bottom: 0;">🎮 控制台</h2>
         
+        <div><div id="log">System Ready...</div></div>
 
-        <!-- 弹窗结构 -->
-        <div id="statsModal" class="modal-overlay">
-            <div class="modal-content">
-                <h2 style="margin-top:0; border-bottom:none;">📊 系统性能报告</h2>
+        <!-- 时间窗口 -->
+        <div class="control-group">
+            <h3>⏳ 时间窗口管理</h3>
+            <div class="dual-input">
+                <label>Window:</label>
+                <input type="number" id="winSize" value="600" placeholder="分析(s)">
+                <button onclick="updateWindowSize()" style="width: 50px;">Set</button>
+            </div>
+            <div class="dual-input">
+                <label>Storage:</label>
+                <input type="number" id="retSize" value="3600" placeholder="保留(s)">
+                <!-- 颜色修复：去掉了 style="background-color:..."，现在和上面一样是蓝色 -->
+                <button onclick="updateRetention()" style="width: 50px;">Set</button>
+            </div>
+            <div style="font-size:11px; color:#999; text-align:right;" id="retentionInfo">Retention: -- s</div>
+        </div>
 
-                <div class="stat-row">
-                    <span class="stat-label">运行时间</span>
-                    <span class="stat-value" id="disp_runtime">0 s</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">处理行数</span>
-                    <span class="stat-value" id="disp_lines">0</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">处理词数</span>
-                    <span class="stat-value" id="disp_words">0</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">吞吐量 (QPS)</span>
-                    <span class="stat-value" id="disp_qps">0 /s</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">内存占用</span>
-                    <span class="stat-value" id="disp_mem" style="color: #dc2626;">0 MB</span>
-                </div>
+        <!-- 数据模拟 -->
+        <div class="control-group">
+            <h3>📝 数据模拟</h3>
+            <div class="row">
+                <textarea id="manualInput" rows="1" placeholder="输入内容..."></textarea>
+                <button onclick="sendManualData()" style="width: 60px;">发送</button>
+            </div>
+        </div>
 
-                <div style="margin-top: 20px; text-align: right;">
-                    <button onclick="closeStats()" style="width: auto; background: #9ca3af;">关闭</button>
-                </div>
+        <!-- 过滤配置 -->
+        <div class="control-group">
+            <h3>⚙️ 过滤配置</h3>
+            <div class="tag-group">
+                <label class="tag-check"><input type="checkbox" value="n" checked> 名(n)</label>
+                <label class="tag-check"><input type="checkbox" value="v" checked> 动(v)</label>
+                <label class="tag-check"><input type="checkbox" value="a"> 形(a)</label>
+                <label class="tag-check"><input type="checkbox" value="nr"> 人</label>
+                <label class="tag-check"><input type="checkbox" value="eng" checked> Eng</label>
+            </div>
+            <div class="row">
+                <input type="text" id="newSensitive" placeholder="屏蔽词..." style="margin-bottom:0;">
+                <button onclick="addSensitive()" style="width:40px;">+</button>
+                <button onclick="updateConfig()" class="secondary" style="width:80px;">更新</button>
+            </div>
+            <div id="sensitiveList" class="tag-group" style="margin-top:5px;"></div>
+        </div>
+
+        <!-- 统计与报告 (补全的功能) -->
+        <div class="control-group">
+            <h3>📊 统计与报告</h3>
+            <div class="row">
+                <button onclick="showStats()" class="success">查看性能指标</button>
+                <button onclick="genReport()" class="secondary">导出历史报告</button>
+            </div>
+        </div>
+
+        <!-- 历史回放 -->
+        <div class="control-group">
+            <h3>📂 历史回放</h3>
+            <div class="row">
+                <input type="text" id="histStart" value="00:00:00">
+                <input type="text" id="histEnd" value="00:10:00">
+            </div>
+            <div class="row">
+                <button onclick="viewHistory()" style="background: #8b5cf6;">回放图表</button>
+                <button onclick="backToRealtime()">返回实时</button>
+            </div>
+        </div>
+
+        <!-- 系统操作 -->
+        <div class="control-group" style="border-color:#fca5a5; background:#fef2f2;">
+            <h3 style="color:#b91c1c;">⚡ 系统操作</h3>
+            <div class="row">
+                <input type="number" id="benchN" value="1000" placeholder="N">
+                <button onclick="runBench()" class="danger">压测</button>
+            </div>
+            <button onclick="resetSystem()" class="danger" style="margin-top:5px;">♻️ 清空所有数据 (Reset)</button>
+        </div>
+    </div>
+
+    <!-- 性能统计弹窗 -->
+    <div id="statsModal" class="modal-overlay" onclick="closeStats(event)">
+        <div class="modal-content">
+            <h2 style="border-bottom:none; margin-bottom:10px;">🚀 系统性能</h2>
+            <div class="stat-row"><span>运行时间</span><span class="stat-val" id="st_time">0s</span></div>
+            <div class="stat-row"><span>处理行数</span><span class="stat-val" id="st_lines">0</span></div>
+            <div class="stat-row"><span>处理词数</span><span class="stat-val" id="st_words">0</span></div>
+            <div class="stat-row"><span>吞吐量 (QPS)</span><span class="stat-val" id="st_qps">0</span></div>
+            <div class="stat-row"><span>内存占用</span><span class="stat-val" style="color:#dc2626;" id="st_mem">0 MB</span></div>
+            <div style="text-align:right; margin-top:15px;">
+                <button onclick="closeStats(null)" class="secondary" style="width:auto;">关闭</button>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 1. 图表初始化 ---
-        var myChart = echarts.init(document.getElementById('main'));
-        var option = {
+        var myChart = echarts.init(document.getElementById('mainChart'));
+        myChart.setOption({
             tooltip: { trigger: 'axis' },
+            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true, top: '10%' },
             xAxis: { type: 'category', data: [] },
             yAxis: { type: 'value' },
-            series: [{
-                type: 'bar',
-                data: [],
-                itemStyle: { borderRadius: [5, 5, 0, 0], color: '#3b82f6' },
-                label: { show: true, position: 'top' },
-                animationDuration: 300
-            }]
-        };
-        myChart.setOption(option);
+            series: [{ type: 'bar', data: [], itemStyle: { color: '#3b82f6', borderRadius: [4,4,0,0] }, label: { show: true, position: 'top' } }]
+        });
 
-        // --- 2. 自动刷新数据 (每秒) ---
+        var isHistoryMode = false;
+
         setInterval(() => {
-            fetch('/api/data')
-                .then(res => res.json())
-                .then(data => {
-                    myChart.setOption({
-                        xAxis: { data: data.categories },
-                        series: [{ data: data.values }]
-                    });
+            if (isHistoryMode) return;
+            fetch('/api/data').then(r=>r.json()).then(d => {
+                myChart.setOption({
+                    xAxis: { data: d.categories },
+                    series: [{ data: d.values, itemStyle: { color: '#3b82f6' } }]
                 });
+                document.getElementById('windowInfo').innerText = `Window: [${d.window_start} ~ ${d.window_end}] | Now: ${d.current_ts}`;
+                document.getElementById('retentionInfo').innerText = `Retention: ${d.retention_sec} s`;
+            });
+            fetch('/api/trends?k=10').then(r=>r.json()).then(list => renderTrends(list));
         }, 1000);
 
-        // --- 3. 控制逻辑 ---
-        function sendCommand(cmdStr) {
-            const logEl = document.getElementById('log');
-            logEl.innerText = "Sending...";
+        function renderTrends(list) {
+            const tbody = document.getElementById('trendBody');
+            const threshold = parseFloat(document.getElementById('trendThreshold').value) || 0;
+            tbody.innerHTML = "";
+            let rank = 1;
+            list.forEach(item => {
+                if (Math.abs(item.score) < threshold) return;
+                const tr = document.createElement('tr');
+                const trendClass = item.score > 0 ? "trend-up" : "trend-down";
+                tr.innerHTML = `<td>${rank++}</td><td style="font-weight:bold;">${item.word}</td><td class="${trendClass}">${item.score.toFixed(2)}</td><td class="${trendClass}">${item.score>0?"🔥":"❄️"}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
 
-            fetch('/api/command', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cmd: cmdStr })
-            })
-                .then(res => res.json())
-                .then(data => {
-                    logEl.innerText = "✅ " + data.message;
-                })
-                .catch(err => {
-                    logEl.innerText = "❌ Error: " + err;
+        // API 基础函数
+        function apiPost(url, data) {
+            log("Sending...");
+            fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) })
+            .then(r=>r.json()).then(d=>log("✅ "+(d.message||"OK"))).catch(e=>log("❌ "+e));
+        }
+        function log(msg) { 
+            const el = document.getElementById('log');
+            el.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`; 
+        }
+
+        // 按钮功能函数
+        function updateWindowSize() { 
+            const s = document.getElementById('winSize').value;
+            if(s) apiPost('/api/command', { cmd: `[ACTION] SET_WINDOW S=${s}` });
+        }
+        function updateRetention() { 
+            const r = document.getElementById('retSize').value;
+            if(r) apiPost('/api/command', { cmd: `[ACTION] SET_RETENTION R=${r}` });
+        }
+        function sendManualData() { 
+            const val = document.getElementById('manualInput').value;
+            if(val) { apiPost('/api/command', { cmd: val }); document.getElementById('manualInput').value=""; }
+        }
+        function updateConfig() {
+            const tags = Array.from(document.querySelectorAll('.tag-check input:checked')).map(c=>c.value);
+            apiPost('/api/config', { tags: tags });
+        }
+        function loadSensitive() {
+            fetch('/api/config').then(r=>r.json()).then(d => {
+                const div = document.getElementById('sensitiveList'); div.innerHTML = "";
+                d.sensitive_words.forEach(w => {
+                    const s = document.createElement('span'); s.className="badge"; s.innerHTML=`${w} ×`;
+                    s.onclick=()=>removeSensitive(w); div.appendChild(s);
                 });
+            });
+        }
+        loadSensitive();
+        function addSensitive() { 
+            const w = document.getElementById('newSensitive').value;
+            if(w) { apiPost('/api/config', { add_sensitive: w }); document.getElementById('newSensitive').value=""; setTimeout(loadSensitive,500); }
+        }
+        function removeSensitive(w) { 
+            if(confirm("Remove "+w+"?")) { apiPost('/api/config', { remove_sensitive: w }); setTimeout(loadSensitive,500); }
         }
 
-        function sendManualData() {
-            const val = document.getElementById('dataInput').value;
-            if (!val) return;
-            // 如果用户没写时间戳，自动补一个当前时间（伪造一个）
-            let cmd = val;
-            if (!val.startsWith('[')) {
-                // 简单演示，统一补 [00:00:01]
-                cmd = "[00:00:01] " + val;
-            }
-            sendCommand(cmd);
-        }
-
-        function setWindow() {
-            const s = document.getElementById('windowSize').value;
-            sendCommand(`[ACTION] SET_WINDOW S=${s}`);
-        }
-
-        function runBenchmark() {
-            const n = document.getElementById('benchCount').value;
-            sendCommand(`[ACTION] BENCHMARK N=${n}`);
-        }
-
-        function genHistory() {
+        // 历史相关
+        function viewHistory() {
+            isHistoryMode = true;
             const s = document.getElementById('histStart').value;
             const e = document.getElementById('histEnd').value;
-            sendCommand(`[ACTION] HISTORY START=${s} END=${e} STEP=60`);
+            log(`Loading History...`);
+            document.getElementById('windowInfo').innerText = `MODE: HISTORY [${s} ~ ${e}]`;
+            fetch(`/api/history_view?start=${s}&end=${e}`).then(r=>r.json()).then(d => {
+                myChart.setOption({ xAxis: {data:d.categories}, series: [{data:d.values, itemStyle:{color:'#8b5cf6'}}] });
+            });
+        }
+        function backToRealtime() {
+            isHistoryMode = false;
+            myChart.setOption({ series: [{ itemStyle: { color: '#3b82f6' } }] });
+            log("Back to Realtime.");
         }
 
-        function resetSystem() {
-            if (!confirm("确定要清空所有统计数据吗？此操作不可恢复。")) return;
-            sendCommand("[ACTION] RESET");
-        }
-
-        // 打开弹窗
+        // 统计与报告 (新功能)
         function showStats() {
-            fetch('/api/stats')
-                .then(res => res.json())
-                .then(data => {
-                    // 填充数据，保留2位小数
-                    document.getElementById('disp_runtime').innerText = data.runtime.toFixed(2) + " s";
-                    document.getElementById('disp_lines').innerText = Math.floor(data.lines);
-                    document.getElementById('disp_words').innerText = Math.floor(data.words);
-                    document.getElementById('disp_qps').innerText = data.qps.toFixed(2) + " lines/s";
-                    document.getElementById('disp_mem').innerText = data.memory.toFixed(2) + " MB";
-
-                    // 显示弹窗
-                    document.getElementById('statsModal').style.display = 'flex';
-                })
-                .catch(err => alert("获取失败: " + err));
+            fetch('/api/stats').then(r=>r.json()).then(d => {
+                document.getElementById('st_time').innerText = d.runtime.toFixed(2)+" s";
+                document.getElementById('st_lines').innerText = d.lines;
+                document.getElementById('st_words').innerText = d.words;
+                document.getElementById('st_qps').innerText = d.qps.toFixed(2);
+                document.getElementById('st_mem').innerText = d.memory.toFixed(2)+" MB";
+                document.getElementById('statsModal').style.display = 'flex';
+            });
+        }
+        function closeStats(e) {
+            if (!e || e.target.id === 'statsModal') document.getElementById('statsModal').style.display = 'none';
+        }
+        function genReport() {
+            const s = document.getElementById('histStart').value;
+            const e = document.getElementById('histEnd').value;
+            apiPost('/api/command', { cmd: `[ACTION] HISTORY START=${s} END=${e} STEP=60` });
         }
 
-        // 关闭弹窗
-        function closeStats() {
-            document.getElementById('statsModal').style.display = 'none';
+        // 系统操作
+        function runBench() { apiPost('/api/command', { cmd: `[ACTION] BENCHMARK N=${document.getElementById('benchN').value}` }); }
+        
+        function resetSystem() {
+            if(!confirm("⚠️ 警告：这将清空所有内存数据和历史日志文件！")) return;
+            
+            // 1. 发送命令清空后端 (内存 + 文件)
+            apiPost('/api/command', { cmd: `[ACTION] RESET` });
+            
+            // 2. 立即清空前端状态
+            isHistoryMode = false;
+            myChart.setOption({ xAxis: { data: [] }, series: [{ data: [], itemStyle: { color: '#3b82f6' } }] });
+            document.getElementById('trendBody').innerHTML = "";
+            document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
+            log("System & Log Cleared.");
         }
-
-        // 点击遮罩层也能关闭
-        document.getElementById('statsModal').addEventListener('click', function (e) {
-            if (e.target === this) closeStats();
-        });
     </script>
 </body>
-
 </html>
