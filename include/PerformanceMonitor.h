@@ -3,8 +3,8 @@
 #include <atomic>
 #include <iostream>
 #include <iomanip>
-#include <map> // 新增
-#include <string> // 新增
+#include <map>
+#include <string>
 
 // --- Windows 内存监控依赖 ---
 #ifdef _WIN32
@@ -13,18 +13,16 @@
 #pragma comment(lib, "psapi.lib") // 链接库
 #endif
 
-using namespace std;
-using namespace std::chrono;
-
 class PerformanceMonitor {
 private:
-    atomic<long long> totalProcessedWords{0};
-    atomic<long long> totalProcessedLines{0};
-    steady_clock::time_point startTime;
+    std::atomic<long long> totalProcessedWords{0};
+    std::atomic<long long> totalProcessedLines{0};
+
+    std::chrono::steady_clock::time_point startTime;
 
 public:
     PerformanceMonitor() {
-        startTime = steady_clock::now();
+        startTime = std::chrono::steady_clock::now();
     }
 
     void record(int wordCount) {
@@ -35,10 +33,10 @@ public:
     void reset() {
         totalProcessedWords = 0;
         totalProcessedLines = 0;
-        startTime = steady_clock::now();
+        startTime = std::chrono::steady_clock::now();
     }
 
-    // 【新增】获取当前内存占用 (单位: MB)
+    // 获取当前内存占用 (单位: MB)
     double getCurrentMemoryUsageMB() {
 #ifdef _WIN32
         PROCESS_MEMORY_COUNTERS_EX pmc;
@@ -52,18 +50,18 @@ public:
         return 0.0;
     }
 
-    // 【新增】返回结构化数据，供 Web API 使用
-    map<string, double> getStats() {
-        auto now = steady_clock::now();
-        auto duration = duration_cast<milliseconds>(now - startTime).count();
+    // 返回结构化数据，供 Web API 使用
+    std::map<std::string, double> getStats() {
+        auto now = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
         if (duration == 0) duration = 1;
 
         double seconds = duration / 1000.0;
         
-        map<string, double> stats;
+        std::map<std::string, double> stats;
         stats["runtime_sec"] = seconds;
-        stats["total_lines"] = (double)totalProcessedLines.load();
-        stats["total_words"] = (double)totalProcessedWords.load();
+        stats["total_lines"] = static_cast<double>(totalProcessedLines.load());
+        stats["total_words"] = static_cast<double>(totalProcessedWords.load());
         stats["lines_per_sec"] = totalProcessedLines / seconds;
         stats["words_per_sec"] = totalProcessedWords / seconds;
         stats["memory_mb"] = getCurrentMemoryUsageMB();
@@ -72,8 +70,8 @@ public:
     }
 
     void printStats() {
-        auto now = steady_clock::now();
-        auto duration = duration_cast<milliseconds>(now - startTime).count();
+        auto now = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
         if (duration == 0) duration = 1;
 
         double seconds = duration / 1000.0;
@@ -81,13 +79,13 @@ public:
         double wordsPerSec = totalProcessedWords / seconds;
         double memoryMB = getCurrentMemoryUsageMB(); // 获取内存
 
-        cout << "\n=== [Performance Metrics] ===" << endl;
-        cout << "Running Time   : " << fixed << setprecision(2) << seconds << " s" << endl;
-        cout << "Total Lines    : " << totalProcessedLines << endl;
-        cout << "Total Words    : " << totalProcessedWords << endl;
-        cout << "Throughput     : " << linesPerSec << " lines/sec" << endl;
-        cout << "Word Rate      : " << wordsPerSec << " words/sec" << endl;
-        cout << "Memory Usage   : " << memoryMB << " MB" << endl; // 新增输出
-        cout << "=============================\n" << endl;
+        std::cout << "\n=== [Performance Metrics] ===" << std::endl;
+        std::cout << "Running Time   : " << std::fixed << std::setprecision(2) << seconds << " s" << std::endl;
+        std::cout << "Total Lines    : " << totalProcessedLines << std::endl;
+        std::cout << "Total Words    : " << totalProcessedWords << std::endl;
+        std::cout << "Throughput     : " << linesPerSec << " lines/sec" << std::endl;
+        std::cout << "Word Rate      : " << wordsPerSec << " words/sec" << std::endl;
+        std::cout << "Memory Usage   : " << memoryMB << " MB" << std::endl;
+        std::cout << "=============================\n" << std::endl;
     }
 };

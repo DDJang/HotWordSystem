@@ -10,36 +10,41 @@
 #include <iostream>
 #include <cmath>
 #include <mutex>
-
-using namespace std;
+#include <utility>
 
 class SlidingWindow {
 private:
     long long windowSizeSeconds;
     long long currentTimeCursor = 0;
     
-    // 【核心修复】最大保留时间（物理存储时间），例如 3600秒 (1小时)
+    // 最大保留时间（物理存储时间），例如 3600秒 (1小时)
     // 即使窗口只有 10秒，我们也保留 1小时数据，以便用户随时把窗口拉大
     long long maxRetentionSeconds = 3600; 
 
     // 1. 物理存储 (Storage)：保留所有原始数据，用于“回滚”和“重算”
     // map 自动按时间排序
-    map<long long, vector<string>> storage;
+    std::map<long long, std::vector<std::string>> storage;
     
     // 2. 逻辑视图 (Active View)：仅保存当前窗口内的有效数据，用于快速增减词频
     // 使用 deque 模拟滑动窗口队列，头部是最早的数据
-    deque<pair<long long, vector<string>>> activeData;
+    std::deque<std::pair<long long, std::vector<std::string>>> activeData;
 
     // 实时词频统计 (对应 activeData)
-    unordered_map<string, int> wordCounts;
+    std::unordered_map<std::string, int> wordCounts;
 
     mutable std::mutex mtx;
+
+    // 【新增】最大允许存储的条目数 (防止内存爆炸)
+    // 假设每条数据平均占 1KB，50万条大约占用 500MB 内存，是一个比较安全的上限
+    const size_t MAX_STORAGE_ENTRIES = 500000; 
+
 
 public:
     SlidingWindow(long long windowSize = 600) : windowSizeSeconds(windowSize) {}
 
     // --- 数据接入 ---
-    void addData(long long timestamp, const vector<string>& words) {
+    // 参数 vector<string> -> std::vector<std::string>
+    void addData(long long timestamp, const std::vector<std::string>& words) {
         std::lock_guard<std::mutex> lock(mtx);
 
         if (words.empty()) return;
@@ -51,10 +56,11 @@ public:
 
         // 2. 存入物理存储 (Storage) - 只要不过期太久都存
         // 注意：这里处理乱序，如果 key 已存在则追加
-        if (storage.find(timestamp) == storage.end()) {
+        auto storageIt = storage.find(timestamp); // auto 推导，底层是 std::map 迭代器
+        if (storageIt == storage.end()) {
             storage[timestamp] = words;
         } else {
-            storage[timestamp].insert(storage[timestamp].end(), words.begin(), words.end());
+            storageIt->second.insert(storageIt->second.end(), words.begin(), words.end());
         }
 
         // 3. 更新逻辑视图 (Active View)
@@ -62,31 +68,26 @@ public:
         long long threshold = currentTimeCursor - windowSizeSeconds;
         if (timestamp > threshold) {
             // 计入词频
-            for (const string& w : words) {
+            for (const std::string& w : words) {
                 wordCounts[w]++;
             }
-            // 放入活跃队列 (注意：deque 只能处理按序到达的数据)
-            // 如果是乱序旧数据(但还在窗口内)，上面的 storage 已经存了，
-            // 但 deque 插入中间比较麻烦。
-            // 为了简化复杂度：如果是乱序数据，且影响了统计，最稳妥的方式是【触发一次轻量级重算】
-            // 或者：由于 addData 主要是处理最新时间，我们假设乱序只发生在小范围内。
-            // 简单的处理：直接 push_back。如果是迟到数据，虽然时间戳小，但在队列尾部。
-            // 下面 evicted 的时候会根据时间戳判断，所以 push_back 是安全的。
+            // 放入活跃队列
             activeData.push_back({timestamp, words});
         }
 
         // 4. 执行淘汰 (逻辑淘汰 + 物理淘汰)
         evictOutdatedData();
+        evictOverLimitData(); // 【新增】基于内存/数量的强制淘汰
     }
 
-    // --- 【关键修复】设置窗口大小 ---
+    // --- 设置窗口大小 ---
     void setWindowSize(long long newSizeSeconds) {
         std::lock_guard<std::mutex> lock(mtx);
 
         if (newSizeSeconds <= 0) return;
         
-        cout << "[System] Window size changed: " << windowSizeSeconds 
-             << "s -> " << newSizeSeconds << "s (Rebuilding view...)" << endl;
+        std::cout << "[System] Window size changed: " << windowSizeSeconds 
+             << "s -> " << newSizeSeconds << "s (Rebuilding view...)" << std::endl;
         
         windowSizeSeconds = newSizeSeconds;
         
@@ -104,12 +105,12 @@ public:
         
         for (; it != storage.end(); ++it) {
             long long ts = it->first;
-            const vector<string>& words = it->second;
+            const std::vector<std::string>& words = it->second;
 
             // 重新加入队列
             activeData.push_back({ts, words});
             // 重新统计词频
-            for (const string& w : words) {
+            for (const std::string& w : words) {
                 wordCounts[w]++;
             }
         }
@@ -119,7 +120,7 @@ public:
     }
 
     // 获取当前窗口范围
-    pair<long long, long long> getWindowRange() {
+    std::pair<long long, long long> getWindowRange() {
         std::lock_guard<std::mutex> lock(mtx);
         long long endT = currentTimeCursor;
         long long startT = (endT > windowSizeSeconds) ? (endT - windowSizeSeconds) : 0;
@@ -127,15 +128,15 @@ public:
     }
 
     // 趋势分析 (逻辑不变，基于 storage 计算)
-    vector<pair<string, double>> getTrendingWords(int topK) {
+    std::vector<std::pair<std::string, double>> getTrendingWords(int topK) {
         std::lock_guard<std::mutex> lock(mtx);
         if (storage.empty()) return {};
 
         long long midPoint = currentTimeCursor - (windowSizeSeconds / 2);
         long long startPoint = currentTimeCursor - windowSizeSeconds;
 
-        unordered_map<string, int> recentCounts; 
-        unordered_map<string, int> oldCounts;    
+        std::unordered_map<std::string, int> recentCounts; 
+        std::unordered_map<std::string, int> oldCounts;    
 
         // 直接遍历 storage 比较准确
         auto it = storage.upper_bound(startPoint);
@@ -149,41 +150,51 @@ public:
             }
         }
 
-        vector<pair<string, double>> trends;
+        std::vector<std::pair<std::string, double>> trends;
         for (const auto& kv : wordCounts) {
-            const string& word = kv.first;
+            const std::string& word = kv.first;
             int r = recentCounts[word];
             int o = oldCounts[word];
             if (kv.second < 2) continue; 
-            double score = (double)r - (double)o; 
+            double score = static_cast<double>(r) - static_cast<double>(o);
             if (score != 0) trends.push_back({word, score});
         }
 
-        auto cmp = [](const pair<string, double>& a, const pair<string, double>& b) {
+        // lambda 表达式保持不变，cmp 推导 std::pair 类型
+        auto cmp = [](const std::pair<std::string, double>& a, const std::pair<std::string, double>& b) {
             return a.second > b.second; 
         };
-        sort(trends.begin(), trends.end(), cmp);
-        if (trends.size() > topK) trends.resize(topK);
+        std::sort(trends.begin(), trends.end(), cmp);
+        if (trends.size() > static_cast<std::size_t>(topK)) {
+            trends.resize(static_cast<std::size_t>(topK));
+        }
         return trends;
     }
 
     // Top-K (基于 wordCounts)
-    vector<pair<string, int>> getTopK(int k) {
+    std::vector<std::pair<std::string, int>> getTopK(int k) {
         std::lock_guard<std::mutex> lock(mtx);
-        auto cmp = [](const pair<string, int>& a, const pair<string, int>& b) {
+
+        auto cmp = [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) {
             return a.second > b.second;
         };
-        priority_queue<pair<string, int>, vector<pair<string, int>>, decltype(cmp)> minHeap(cmp);
+        std::priority_queue<std::pair<std::string, int>, 
+                            std::vector<std::pair<std::string, int>>, 
+                            decltype(cmp)> minHeap(cmp);
+        
         for (const auto& entry : wordCounts) {
             minHeap.push(entry);
-            if (minHeap.size() > k) minHeap.pop();
+            if (minHeap.size() > static_cast<std::size_t>(k)) {
+                minHeap.pop();
+            }
         }
-        vector<pair<string, int>> result;
+        
+        std::vector<std::pair<std::string, int>> result;
         while (!minHeap.empty()) {
             result.push_back(minHeap.top());
             minHeap.pop();
         }
-        reverse(result.begin(), result.end());
+        std::reverse(result.begin(), result.end());
         return result;
     }
 
@@ -204,8 +215,8 @@ public:
             seconds = windowSizeSeconds;
         }
         
-        cout << "[System] Max retention changed: " << maxRetentionSeconds 
-             << "s -> " << seconds << "s" << endl;
+        std::cout << "[System] Max retention changed: " << maxRetentionSeconds 
+             << "s -> " << seconds << "s" << std::endl;
              
         maxRetentionSeconds = seconds;
         
@@ -220,6 +231,39 @@ public:
     }
 
 private:
+    // 【新增】强制容量限制
+    void evictOverLimitData() {
+        // 如果 storage map 的大小超过了限制
+        while (storage.size() > MAX_STORAGE_ENTRIES) {
+            // storage.begin() 是最老的时间戳
+            // 注意：如果被删除的数据恰好在当前的 Active Window 内（窗口极大），
+            // 理论上我们也应该从 activeData 和 wordCounts 里扣除。
+            // 但这种情况极少见（意味着你的窗口比内存上限还大），
+            // 为了防止系统崩溃，我们优先保命（删除 storage），数据一致性做次要处理。
+            
+            // 简单处理：仅从物理存储删除，防止 storage 无限膨胀
+            // 如果用户此时把窗口拉大到覆盖这些被删除的数据，会发现数据缺失（这是预期的牺牲）
+            storage.erase(storage.begin());
+        }
+        
+        // 同时也检查一下 activeData (逻辑队列)，防止极端情况下队列过长
+        // 比如有人恶意把 windowSize 设为 10年
+        while (activeData.size() > MAX_STORAGE_ENTRIES) {
+            const auto& pair = activeData.front();
+            const std::vector<std::string>& words = pair.second;
+            
+            // 既然从 active 移除了，必须扣减词频
+            for (const std::string& w : words) {
+                auto it = wordCounts.find(w);
+                if (it != wordCounts.end()) {
+                    it->second--;
+                    if (it->second <= 0) wordCounts.erase(it);
+                }
+            }
+            activeData.pop_front();
+        }
+    }
+
     void evictOutdatedData() {
         long long threshold = currentTimeCursor - windowSizeSeconds;
 
@@ -228,12 +272,15 @@ private:
         while (!activeData.empty()) {
             // 如果头部数据的时间戳 <= 阈值，说明滑出窗口了
             if (activeData.front().first <= threshold) {
-                const vector<string>& words = activeData.front().second;
+                const std::vector<std::string>& words = activeData.front().second;
                 // 扣减词频
-                for (const string& w : words) {
-                    wordCounts[w]--;
-                    if (wordCounts[w] <= 0) {
-                        wordCounts.erase(w);
+                for (const std::string& w : words) {
+                    auto countIt = wordCounts.find(w);
+                    if (countIt != wordCounts.end()) {
+                        countIt->second--;
+                        if (countIt->second <= 0) {
+                            wordCounts.erase(countIt);
+                        }
                     }
                 }
                 activeData.pop_front();

@@ -27,7 +27,7 @@ void test_sliding_window() {
     
     assert(!hasBanana); // banana 应该被淘汰
     
-    cout << "[Test] SlidingWindow Passed!" << endl;
+    std::cout << "[Test] SlidingWindow Passed!" << std::endl;
 }
 
 int main() {

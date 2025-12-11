@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>热词监控与控制中心 V2.2</title>
+    <title>热词监控与控制中心</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         :root {
@@ -306,20 +306,20 @@
             <h3>⏳ 视图设置</h3>
             <div class="dual-input">
                 <label>Window:</label>
-                <input type="number" id="winSize" value="600" placeholder="分析(s)">
+                <!-- 限制 1秒 ~ 86400秒(1天) -->
+                <input type="number" id="winSize" value="600" min="1" max="86400" placeholder="1-86400">
                 <button onclick="updateWindowSize()" style="width: 50px;">Set</button>
             </div>
             <div class="dual-input">
                 <label>Storage:</label>
-                <input type="number" id="retSize" value="3600" placeholder="保留(s)">
-                <!-- 颜色修复：去掉了 style="background-color:..."，现在和上面一样是蓝色 -->
+                <!-- 限制 600秒 ~ 604800秒(7天) -->
+                <input type="number" id="retSize" value="3600" min="600" max="604800" placeholder="> Window">
                 <button onclick="updateRetention()" style="width: 50px;">Set</button>
             </div>
-            <!-- 【新增】Top-K 设置 -->
             <div class="dual-input">
                 <label>Top-K:</label>
-                <input type="number" id="displayK" value="10" placeholder="显示数量">
-                <!-- 这里不需要按钮，JS 会自动读取 -->
+                <!-- 限制 1 ~ 100 -->
+                <input type="number" id="displayK" value="10" min="1" max="100">
             </div>
             <div style="font-size:11px; color:#999; text-align:right;" id="retentionInfo">Retention: -- s</div>
         </div>
@@ -335,11 +335,11 @@
 
         <!-- 过滤配置 -->
         <div class="control-group">
-            <h3>⚙️ 过滤配置 (实时生效)</h3>
+            <h3>⚙️ 过滤配置</h3>
             <div class="tag-group">
                 <!-- 【新增】允许所有 -->
                 <label class="tag-check" style="font-weight:bold; color:#2563eb;">
-                    <input type="checkbox" id="cb_all" onchange="toggleAll(this)"> 🟢 允许所有词性
+                    <input type="checkbox" id="cb_all" onchange="toggleAll(this)"> 不过滤词性
                 </label>
 
                 <!-- 分割线 -->
@@ -379,8 +379,9 @@
         <div class="control-group">
             <h3>📂 历史回放</h3>
             <div class="row">
-                <input type="text" id="histStart" value="00:00:00">
-                <input type="text" id="histEnd" value="00:10:00">
+                <!-- 增加 pattern 提示格式 -->
+                <input type="text" id="histStart" value="00:00:00" placeholder="HH:MM:SS" maxlength="8">
+                <input type="text" id="histEnd" value="00:10:00" placeholder="HH:MM:SS" maxlength="8">
             </div>
             <div class="row">
                 <button onclick="viewHistory()" style="background: #8b5cf6;">回放图表</button>
@@ -392,10 +393,15 @@
         <div class="control-group" style="border-color:#fca5a5; background:#fef2f2;">
             <h3 style="color:#b91c1c;">⚡ 系统操作</h3>
             <div class="row">
-                <input type="number" id="benchN" value="1000" placeholder="N">
-                <button onclick="runBench()" class="danger">压测</button>
+                <!-- 限制 N 最大 100,000，防止压测卡死 -->
+                <input type="number" id="benchN" value="1000" min="1" max="100000" placeholder="Max 100000">
+                <button onclick="runBench()" class="danger">启动压力测试</button>
             </div>
-            <button onclick="resetSystem()" class="danger" style="margin-top:5px;">♻️ 清空所有数据 (Reset)</button>
+            <button onclick="resetSystem()" class="danger" style="margin-top:5px;">清空所有数据</button>
+
+            <!-- 【新增】终止按钮 -->
+            <button onclick="shutdownSystem()" class="danger" style="margin-top:5px; background:#7f1d1d;">
+                终止程序</button>
         </div>
     </div>
 
@@ -440,19 +446,46 @@
                 .then(data => {
                     myChart.setOption({
                         xAxis: { data: data.categories },
-                        series: [{ 
+                        series: [{
                             data: data.values,
-                            itemStyle: { color: '#3b82f6' } 
+                            itemStyle: { color: '#3b82f6' }
                         }]
                     });
-                    document.getElementById('windowInfo').innerText = 
+                    document.getElementById('windowInfo').innerText =
                         `Window: [${data.window_start} ~ ${data.window_end}] | Now: ${data.current_ts}`;
                     document.getElementById('retentionInfo').innerText = `Retention: ${data.retention_sec} s`;
                 });
-            
+
             // 趋势接口也可以加上 k，或者保持默认 10
-            fetch('/api/trends?k=10').then(r=>r.json()).then(list => renderTrends(list));
+            fetch('/api/trends?k=10').then(r => r.json()).then(list => renderTrends(list));
         }, 1000);
+
+        // --- 通用校验函数 ---
+        function validateNumber(id, min, max, name) {
+            const el = document.getElementById(id);
+            const val = parseInt(el.value);
+            if (isNaN(val)) {
+                alert(`❌ [${name}] 请输入有效的数字`);
+                return null;
+            }
+            if (val < min || val > max) {
+                alert(`❌ [${name}] 数值必须在 ${min} ~ ${max} 之间`);
+                return null;
+            }
+            return val;
+        }
+
+        function validateTime(id) {
+            const el = document.getElementById(id);
+            const val = el.value.trim();
+            // 修改为：允许1到2位数字，逻辑更宽松
+            const regex = /^\d{1,2}:\d{1,2}:\d{1,2}$/;
+            if (!regex.test(val)) {
+                alert(`❌ 时间格式错误: ${val}\n请使用 HH:MM:SS (例如 12:30:00)`);
+                return null;
+            }
+            return val;
+        }
 
         // 【新增】处理 "全选" 逻辑
         function toggleAll(el) {
@@ -497,12 +530,15 @@
 
         // 按钮功能函数
         function updateWindowSize() {
-            const s = document.getElementById('winSize').value;
-            if (s) apiPost('/api/command', { cmd: `[ACTION] SET_WINDOW S=${s}` });
+            const s = validateNumber('winSize', 1, 86400, "Window Size");
+            if (s !== null) apiPost('/api/command', { cmd: `[ACTION] SET_WINDOW S=${s}` });
         }
+
         function updateRetention() {
-            const r = document.getElementById('retSize').value;
-            if (r) apiPost('/api/command', { cmd: `[ACTION] SET_RETENTION R=${r}` });
+            // 获取当前的 window 大小，确保存储时间 >= 窗口时间
+            const winSize = parseInt(document.getElementById('winSize').value) || 0;
+            const r = validateNumber('retSize', winSize, 2592000, "Retention"); // 上限设为30天
+            if (r !== null) apiPost('/api/command', { cmd: `[ACTION] SET_RETENTION R=${r}` });
         }
         function sendManualData() {
             const val = document.getElementById('manualInput').value;
@@ -571,14 +607,20 @@
 
         // 历史相关
         function viewHistory() {
+            const s = validateTime('histStart');
+            const e = validateTime('histEnd');
+            if (!s || !e) return;
+
             isHistoryMode = true;
-            const s = document.getElementById('histStart').value;
-            const e = document.getElementById('histEnd').value;
             log(`Loading History...`);
             document.getElementById('windowInfo').innerText = `MODE: HISTORY [${s} ~ ${e}]`;
-            fetch(`/api/history_view?start=${s}&end=${e}`).then(r => r.json()).then(d => {
-                myChart.setOption({ xAxis: { data: d.categories }, series: [{ data: d.values, itemStyle: { color: '#8b5cf6' } }] });
-            });
+
+            // 这里也要做简单的 URL 编码防止奇怪字符
+            fetch(`/api/history_view?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}`)
+                .then(r => r.json())
+                .then(d => {
+                    myChart.setOption({ xAxis: { data: d.categories }, series: [{ data: d.values, itemStyle: { color: '#8b5cf6' } }] });
+                });
         }
         function backToRealtime() {
             isHistoryMode = false;
@@ -600,17 +642,23 @@
         function closeStats(e) {
             if (!e || e.target.id === 'statsModal') document.getElementById('statsModal').style.display = 'none';
         }
+
         function genReport() {
-            const s = document.getElementById('histStart').value;
-            const e = document.getElementById('histEnd').value;
-            apiPost('/api/command', { cmd: `[ACTION] HISTORY START=${s} END=${e} STEP=60` });
+            const s = validateTime('histStart');
+            const e = validateTime('histEnd');
+            if (s && e) {
+                apiPost('/api/command', { cmd: `[ACTION] HISTORY START=${s} END=${e} STEP=60` });
+            }
         }
 
         // 系统操作
-        function runBench() { apiPost('/api/command', { cmd: `[ACTION] BENCHMARK N=${document.getElementById('benchN').value}` }); }
+        function runBench() {
+            const n = validateNumber('benchN', 1, 100000, "Benchmark N");
+            if (n !== null) apiPost('/api/command', { cmd: `[ACTION] BENCHMARK N=${n}` });
+        }
 
         function resetSystem() {
-            if (!confirm("⚠️ 警告：这将清空所有内存数据和历史日志文件！")) return;
+            if (!confirm("⚠️ 警告：这将清空所有内存数据和历史日志文件，并会中断压力测试！")) return;
 
             // 1. 发送命令清空后端 (内存 + 文件)
             apiPost('/api/command', { cmd: `[ACTION] RESET` });
@@ -621,6 +669,19 @@
             document.getElementById('trendBody').innerHTML = "";
             document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
             log("System & Log Cleared.");
+        }
+
+        function shutdownSystem() {
+            if (!confirm("⚠️ 严重警告 ⚠️\n\n这将完全关闭服务器程序！\n所有连接将断开，您必须手动去服务器重启程序。\n\n确定要关闭吗？")) {
+                return;
+            }
+
+            apiPost('/api/command', { cmd: `[ACTION] SHUTDOWN` });
+
+            // 禁用界面，提示已断开
+            setTimeout(() => {
+                document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
+            }, 1000);
         }
 
 
