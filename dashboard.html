@@ -437,7 +437,7 @@
         <h2 style="margin-bottom: 0;">🎮 控制台</h2>
 
         <div>
-            <div id="log">System Ready...</div>
+            <div id="log">Connecting to server...</div>
         </div>
 
         <!-- 时间窗口 -->
@@ -605,41 +605,78 @@
         var myChart = echarts.init(document.getElementById('mainChart'));
         myChart.setOption({
             tooltip: { trigger: 'axis' },
-            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true, top: '10%' },
+            grid: { left: '3%', right: '5%', bottom: '13%', containLabel: true, top: '10%' },
             xAxis: { type: 'category', data: [] },
             yAxis: { type: 'value' },
+
+            // 【修复第2步 - 推荐】开启通用过渡动画，让排序动画更流畅
+            universalTransition: {
+                enabled: true,
+                // 可以调整动画时长，比如 500 毫秒
+                duration: 500
+            },
+
             series: [{ type: 'bar', data: [], itemStyle: { color: '#3b82f6', borderRadius: [4, 4, 0, 0] }, label: { show: true, position: 'top' } }]
         });
 
-        var isHistoryMode = false;
+        // 【修复第2步 - 推荐的最佳实践】
+        // 添加一个窗口大小调整事件监听器，确保在缩放浏览器时图表也能自适应
+        window.addEventListener('resize', function () {
+            myChart.resize();
+        });
 
-        // --- 核心循环 ---
-        var mainInterval = setInterval(() => {
+        var isHistoryMode = false;
+        var currentBackendTimestamp = "00:00:00";
+        var isInitialLoad = true;
+
+        /**
+         * 获取最新的实时数据并更新主图表
+         */
+        function fetchAndUpdateRealtimeChart() {
+            // 如果是历史模式，则不执行任何操作
             if (isHistoryMode) return;
+
             let k = document.getElementById('displayK').value || 10;
             fetch('/api/data?k=' + k)
                 .then(res => res.json())
                 .then(data => {
-                    // 【终极修复】在处理数据前，检查“遗言”
                     if (data.shutdown) {
-                        // 停止后续的所有轮询
                         clearInterval(mainInterval);
-                        // 显示关闭界面
                         document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
-                        return; // 阻止后续代码执行
+                        return;
                     }
 
+                    const seriesData = data.values.map((value, index) => ({
+                        value: value,
+                        id: data.categories[index]
+                    }));
+
                     myChart.setOption({
-                        xAxis: { data: data.categories },
+                        xAxis: {
+                            data: data.categories
+                        },
                         series: [{
-                            data: data.values,
-                            itemStyle: { color: '#3b82f6' }
+                            data: seriesData
                         }]
                     });
+
+                    // 更新时间戳等信息
+                    currentBackendTimestamp = data.current_ts;
                     document.getElementById('windowInfo').innerText =
                         `Window: [${data.window_start} ~ ${data.window_end}] | Now: ${data.current_ts}`;
                     document.getElementById('retentionInfo').innerText = `Retention: ${data.retention_sec} s`;
+
+                    if (isInitialLoad) {
+                        log("✅ System Ready & Connected", currentBackendTimestamp);
+                        isInitialLoad = false;
+                    }
                 });
+        }
+
+        // --- 核心循环 ---
+        var mainInterval = setInterval(() => {
+            // 直接调用新函数
+            fetchAndUpdateRealtimeChart();
             fetch('/api/trends?k=10').then(r => r.json()).then(list => renderTrends(list));
         }, 1000);
 
@@ -782,11 +819,20 @@
         function apiPost(url, data) {
             log("Sending...");
             fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
-                .then(r => r.json()).then(d => log("✅ " + (d.message || "OK"))).catch(e => log("❌ " + e));
+                .then(r => r.json())
+                // 【修复】修改这里，从响应数据 d 中读取 timestamp
+                .then(d => {
+                    // 如果响应中包含 timestamp 字段，就用它；否则，fallback 到 null (让 log 函数用浏览器时间)
+                    const serverTime = d.timestamp || null;
+                    log("✅ " + (d.message || "OK"), serverTime);
+                })
+                .catch(e => log("❌ " + e));
         }
-        function log(msg) {
+        function log(msg, customTime = null) {
             const el = document.getElementById('log');
-            el.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            // 如果传入了 customTime 就用它，否则用当前浏览器时间
+            const timeStr = customTime ? customTime : new Date().toLocaleTimeString();
+            el.innerText = `[${timeStr}] ${msg}`;
         }
 
         function updateWindowSize() {
@@ -809,7 +855,7 @@
 
                 // 使用 .test() 方法来检查输入值是否匹配正则表达式
                 if (shutdownRegex.test(val)) {
-                    
+
                     // 如果匹配成功，执行 UI 变更逻辑
                     setTimeout(() => {
                         document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
@@ -838,7 +884,8 @@
             const e = validateTime('histEnd');
             if (!s || !e) return;
             isHistoryMode = true;
-            log(`Loading History...`);
+            // 【修复】使用全局变量作为时间戳
+            log(`Loading History...`, currentBackendTimestamp);
             document.getElementById('windowInfo').innerText = `MODE: HISTORY [${s} ~ ${e}]`;
             fetch(`/api/history_view?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}`)
                 .then(r => r.json())
@@ -848,8 +895,18 @@
         }
         function backToRealtime() {
             isHistoryMode = false;
-            // myChart.setOption({ series: [{ itemStyle: { color: '#3b82f6' } }] });
-            log("Back to Realtime.");
+            log("Back to Realtime.", currentBackendTimestamp);
+            document.getElementById('windowInfo').innerText = `Window: [Wait...]`;
+
+            myChart.setOption({
+                series: [{
+                    itemStyle: {
+                        color: '#3b82f6'
+                    }
+                }]
+            });
+
+            fetchAndUpdateRealtimeChart();
         }
 
         function showStats() {
@@ -881,12 +938,32 @@
 
         function resetSystem() {
             if (!confirm("⚠️ 警告：这将清空所有内存数据和历史日志文件，并会中断压力测试！")) return;
-            apiPost('/api/command', { cmd: `[ACTION] RESET` });
-            isHistoryMode = false;
-            myChart.setOption({ xAxis: { data: [] }, series: [{ data: [], itemStyle: { color: '#3b82f6' } }] });
-            document.getElementById('trendBody').innerHTML = "";
-            document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
-            log("System & Log Cleared.");
+
+            // 这里不使用 apiPost，而是手动 fetch，以便我们能控制日志的时间戳
+            // 先显示正在发送
+            log("Sending Reset...", "00:00:00");
+
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cmd: `[ACTION] RESET` })
+            })
+                .then(r => r.json())
+                .then(d => {
+                    // 1. 重置前端图表
+                    isHistoryMode = false;
+                    myChart.setOption({ xAxis: { data: [] }, series: [{ data: [], itemStyle: { color: '#3b82f6' } }] });
+                    document.getElementById('trendBody').innerHTML = "";
+
+                    // 2. 重置顶部状态栏
+                    document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
+
+                    // 3. 【关键】强制日志显示 [00:00:00]
+                    log("✅ System & Log Cleared.", "00:00:00");
+                })
+                .catch(e => {
+                    log("❌ " + e);
+                });
         }
 
         function shutdownSystem() {
