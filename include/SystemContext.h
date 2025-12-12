@@ -24,6 +24,9 @@ public:
     // 【新增】退出标志位
     std::atomic<bool> shouldExit{false}; 
 
+    // 【新增】一个全局互斥锁，用于保护对 ctx 成员的复杂访问
+    std::mutex global_mutex; 
+
     SystemContext() {
         // 路径配置
         const char* DICT_PATH = "dict/jieba.dict.utf8";

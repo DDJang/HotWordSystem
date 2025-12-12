@@ -1,10 +1,27 @@
 #pragma once
+
+#include <iostream>
+#include <string>
+#include <vector>
+#include <thread>
+#include <fstream>
+#include <sstream>
+#include <chrono>
+#include <mutex>
+
 #include "httplib.h"
 #include "json.hpp"
 #include "SystemContext.h"
 #include "CommandExecutor.h"
 #include "GlobalUtils.h"
-#include <direct.h> // for _getcwd
+
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <unistd.h>
+#define _getcwd getcwd
+#endif
+
 
 using json = nlohmann::json;
 
@@ -48,22 +65,25 @@ private:
 
         // 2. GET 数据接口
         svr.Get("/api/data", [&](const httplib::Request& req, httplib::Response& res) {
-            // 【终极修复】在处理任何数据前，先检查关机标志
+            std::lock_guard<std::mutex> lock(ctx.global_mutex);
+
             if (ctx.shouldExit) {
                 json j;
-                j["shutdown"] = true; // 传递“遗言”
+                j["shutdown"] = true;
                 res.set_content(j.dump(), "application/json");
                 return;
             }
 
-            int k = 10;
-            if (req.has_param("k")) {
-                k = GlobalUtils::safeStoi(req.get_param_value("k"), 1, 100, 10);
-            }
+            int k = GlobalUtils::safeStoi(req.get_param_value("k"), 1, 100, 10);
 
             auto topList = ctx.window->getTopK(k);
             auto range = ctx.window->getWindowRange();
             
+            // 【修复】使用 .load() 来原子性地读取 atomic 变量的值
+            auto currentTs = ctx.lastTimestamp.load();
+            
+            auto retentionSec = ctx.window->getMaxRetention();
+
             json j;
             std::vector<std::string> cats;
             std::vector<int> vals;
@@ -75,14 +95,14 @@ private:
             j["values"] = vals;
             j["window_start"] = GlobalUtils::formatTime(range.first);
             j["window_end"] = GlobalUtils::formatTime(range.second);
-            j["current_ts"] = GlobalUtils::formatTime(ctx.lastTimestamp);
-            j["retention_sec"] = ctx.window->getMaxRetention(); 
+            j["current_ts"] = GlobalUtils::formatTime(currentTs);
+            j["retention_sec"] = retentionSec;
 
             res.set_header("Access-Control-Allow-Origin", "*");
             res.set_content(j.dump(), "application/json");
         });
 
-        // 3. POST 命令接口 (委托给 CommandExecutor)
+        // 3. POST 命令接口
         svr.Post("/api/command", [&](const httplib::Request& req, httplib::Response& res) {
             try {
                 auto j = json::parse(req.body);
@@ -95,21 +115,16 @@ private:
                 resp["status"] = "ok";
                 resp["message"] = output;
 
-                // 【修复】增加时间戳字段
-                // 使用 GlobalUtils::formatTime 将 long long 转换为 "HH:MM:SS" 字符串
-                resp["timestamp"] = GlobalUtils::formatTime(ctx.lastTimestamp);
+                // 【修复】使用 .load() 来原子性地读取。虽然隐式转换可能有效，但显式调用 .load() 更安全、更清晰。
+                resp["timestamp"] = GlobalUtils::formatTime(ctx.lastTimestamp.load());
 
                 res.set_content(resp.dump(), "application/json");
 
-                // 【新增】检查是否需要退出系统
                 if (ctx.shouldExit) {
-                    // 启动一个分离线程来执行退出，
-                    // 确保当前的 HTTP 响应能先发送回前端，让前端知道操作成功了
                     std::thread([&](){
-                        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // 等 0.5秒
-                        std::cout << "[System] Shutting down..." << std::endl;
-                        svr.stop();   // 停止 Web 服务
-                        std::exit(0); // 强行终止整个 C++ 进程
+                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                        std::cout << "[System] Shutting down from web request..." << std::endl;
+                        svr.stop();
                     }).detach();
                 }
             } catch (...) {
@@ -120,60 +135,64 @@ private:
 
         // 4. STATS 接口
         svr.Get("/api/stats", [&](const httplib::Request&, httplib::Response& res) {
-            auto stats = ctx.monitor->getStats();
+            decltype(ctx.monitor->getStats()) stats;
+            {
+                std::lock_guard<std::mutex> lock(ctx.global_mutex);
+                stats = ctx.monitor->getStats();
+            }
+
             json j;
             j["runtime"] = stats["runtime_sec"];
             j["lines"] = stats["total_lines"];
             j["words"] = stats["total_words"];
             j["qps"] = stats["lines_per_sec"];
-            j["wps"] = stats["words_per_sec"];
             j["memory"] = stats["memory_mb"];
             res.set_header("Access-Control-Allow-Origin", "*");
             res.set_content(j.dump(), "application/json");
         });
 
-        // 5. 配置接口
+        // 5. 配置接口 (GET)
         svr.Get("/api/config", [&](const httplib::Request&, httplib::Response& res) {
             json j;
-            j["sensitive_words"] = ctx.processor->getSensitiveWords();
-            j["allow_all"] = ctx.processor->isAllowAllPos(); // 改名以示区分，对应前端 allow_all
-            j["allow_sensitive"] = ctx.processor->isAllowAllSensitive(); 
+            {
+                std::lock_guard<std::mutex> lock(ctx.global_mutex);
+                j["sensitive_words"] = ctx.processor->getSensitiveWords();
+                j["allow_all"] = ctx.processor->isAllowAllPos();
+                j["allow_sensitive"] = ctx.processor->isAllowAllSensitive();
+            }
             res.set_content(j.dump(), "application/json");
         });
 
+        // 5. 配置接口 (POST)
         svr.Post("/api/config", [&](const httplib::Request& req, httplib::Response& res) {
             try {
                 auto j = json::parse(req.body);
                 
-                // 1. 处理词性配置 (Tags 和 AllowAllPos)
+                std::lock_guard<std::mutex> lock(ctx.global_mutex);
+                
                 if (j.contains("tags") || j.contains("allow_all")) {
                     std::vector<std::string> tags;
-                    bool allowAll = false;
+                    bool allowAll = j.value("allow_all", ctx.processor->isAllowAllPos());
                     if (j.contains("tags")) tags = j["tags"].get<std::vector<std::string>>();
-                    
-                    if (j.contains("allow_all")) allowAll = j["allow_all"];
-                    else allowAll = ctx.processor->isAllowAllPos();
-                    
                     ctx.processor->setPosConfig(tags, allowAll);
                 }
 
-                // 2. 【新增】处理敏感词开关 (AllowAllSensitive)
                 if (j.contains("allow_sensitive")) {
-                    bool allowSens = j["allow_sensitive"];
-                    ctx.processor->setSensitiveConfig(allowSens);
+                    ctx.processor->setSensitiveConfig(j["allow_sensitive"]);
                 }
 
-                // 3. 增删敏感词
                 if (j.contains("add_sensitive")) ctx.processor->addSensitiveWord(j["add_sensitive"]);
                 if (j.contains("remove_sensitive")) ctx.processor->removeSensitiveWord(j["remove_sensitive"]);
 
-                // 【修复】将原来的硬编码字符串响应，改为构建一个带时间戳的 JSON 对象
                 json resp;
                 resp["status"] = "ok";
-                resp["message"] = "Config updated"; // 统一提供一个消息
-                resp["timestamp"] = GlobalUtils::formatTime(ctx.lastTimestamp);
+                resp["message"] = "Config updated";
+
+                // 【修复】同样，这里也使用 .load()
+                resp["timestamp"] = GlobalUtils::formatTime(ctx.lastTimestamp.load());
 
                 res.set_content(resp.dump(), "application/json");
+
             } catch(...) { res.status = 400; }
         });
 
@@ -181,14 +200,13 @@ private:
         svr.Get("/api/history_view", [&](const httplib::Request& req, httplib::Response& res) {
             long long tStart = GlobalUtils::parseTimeSeconds(req.get_param_value("start"));
             long long tEnd = GlobalUtils::parseTimeSeconds(req.get_param_value("end"));
+            int k = GlobalUtils::safeStoi(req.get_param_value("k"), 1, 100, 10);
 
-            // 【修复】从请求参数中获取 k 值，如果不存在则默认为 10
-            int k = 10;
-            if (req.has_param("k")) {
-                // 使用您在 /api/data 接口中用过的安全转换函数
-                k = GlobalUtils::safeStoi(req.get_param_value("k"), 1, 100, 10);
+            decltype(ctx.persistence->queryHistoryTopK(0,0,0)) list;
+            {
+                std::lock_guard<std::mutex> lock(ctx.global_mutex);
+                list = ctx.persistence->queryHistoryTopK(tStart, tEnd, k);
             }
-            auto list = ctx.persistence->queryHistoryTopK(tStart, tEnd, k);
 
             json j;
             std::vector<std::string> cats;
@@ -204,9 +222,14 @@ private:
 
         // 7. 趋势
         svr.Get("/api/trends", [&](const httplib::Request& req, httplib::Response& res) {
-            int k = 10;
-            if (req.has_param("k")) k = std::stoi(req.get_param_value("k"));
-            auto trends = ctx.window->getTrendingWords(k);
+            int k = GlobalUtils::safeStoi(req.get_param_value("k"), 1, 100, 10);
+            
+            decltype(ctx.window->getTrendingWords(0)) trends;
+            {
+                std::lock_guard<std::mutex> lock(ctx.global_mutex);
+                trends = ctx.window->getTrendingWords(k);
+            }
+
             json list = json::array();
             for(auto& p : trends) {
                 json item;

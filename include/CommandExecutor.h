@@ -28,6 +28,10 @@ public:
 
     // 处理入口：支持单行或多行文本
     std::string process(const std::string& fullInput) {
+        // 【修复】在函数入口处加锁，保护整个 process 过程
+        std::lock_guard<std::mutex> lock(ctx.global_mutex);
+
+
         // 防止超大包攻击
         if (fullInput.length() > 5000000) { 
             return "Error: Input too large.";
@@ -188,15 +192,21 @@ private:
             }
 
             startTs++; 
-            std::vector<std::string> words = ctx.processor->process(GlobalUtils::generateRandomSentence());
-            ctx.window->addData(startTs, words);
+            // 【修复】生成随机句子可以放在锁外
+            std::string sentence = GlobalUtils::generateRandomSentence();
 
-            // 【终极修复】在这里，将当前的局部时间进度，同步到全局时间戳
-            // 因为 ctx.lastTimestamp 是 std::atomic，这个赋值操作是线程安全的。
-            ctx.lastTimestamp = startTs;
+            // 【修复】进入临界区，加锁
+            {
+                std::lock_guard<std::mutex> lock(ctx.global_mutex);
 
-            ctx.persistence->logData(startTs, words);
-            ctx.monitor->record(static_cast<int>(words.size()));
+                std::vector<std::string> words = ctx.processor->process(sentence);
+                ctx.window->addData(startTs, words);
+                ctx.persistence->logData(startTs, words);
+                
+                // 【注意】monitor->record 和 lastTimestamp 的更新也需要保护
+                ctx.lastTimestamp = startTs;
+                ctx.monitor->record(static_cast<int>(words.size()));
+            } // 锁在这里被释放，给其他线程机会
         }
         std::cout << "[System] Benchmark finished." << std::endl;
     }
