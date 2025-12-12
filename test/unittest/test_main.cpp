@@ -4,6 +4,7 @@
 #include <vector>
 #include <thread>
 #include <filesystem>
+#include <fstream>
 
 // 引入所有核心头文件
 #include "GlobalUtils.h"
@@ -181,6 +182,96 @@ void test_Persistence() {
     ASSERT_EQ(res.size(), 0);
 }
 
+// ----------------------
+// 5. [新增] 测试基于文件的数据处理 (Data-Driven)
+// ----------------------
+void test_FileProcessing() {
+    std::cout << "\n--- Testing File Processing (testdata/sample_text.txt) ---" << std::endl;
+
+    std::string filePath = "testdata/sample_text.txt";
+    std::ifstream file(filePath);
+    
+    // 检查文件是否存在
+    if (!file.is_open()) {
+        std::cerr << "⚠️ Warning: Could not open " << filePath << ". Skipping test." << std::endl;
+        return;
+    }
+
+    // 初始化组件
+    // 注意：这里假设字典还在 dict/ 下，如果在 test 环境路径不同需调整
+    TextProcessor processor("dict/jieba.dict.utf8", "dict/hmm_model.utf8", "dict/user.dict.utf8", "dict/idf.utf8", "dict/stop_words.utf8");
+    SlidingWindow window(600);
+
+    std::string line;
+    int lineCount = 0;
+    long long ts = 1000; // 模拟时间戳
+
+    while (std::getline(file, line)) {
+        if (line.empty()) continue;
+
+        // 处理每一行
+        std::vector<std::string> words = processor.process(line);
+        if (!words.empty()) {
+            window.addData(ts++, words); // 时间戳递增
+            lineCount++;
+        }
+    }
+
+    // 验证逻辑
+    ASSERT_TRUE(lineCount > 0); // 确保读到了数据
+
+    // 检查是否统计到了文件里的关键词
+    auto top = window.getTopK(100);
+    bool foundAI = false;
+    for (const auto& p : top) {
+        if (p.first == "AI" || p.first == "人工智能") foundAI = true;
+    }
+    ASSERT_TRUE(foundAI);
+    
+    std::cout << "✅ Processed " << lineCount << " lines from file successfully." << std::endl;
+}
+
+// ----------------------
+// 6. [新增] 测试历史日志回放 (Log Replay)
+// ----------------------
+void test_LogReplay() {
+    std::cout << "\n--- Testing Log Replay (testdata/mock_history.log) ---" << std::endl;
+
+    std::string mockLogPath = "testdata/mock_history.log";
+    if (!std::filesystem::exists(mockLogPath)) {
+         std::cerr << "⚠️ Warning: " << mockLogPath << " not found." << std::endl;
+         return;
+    }
+
+    // 使用 PersistenceManager 读取这个预制的文件
+    // 注意：PersistenceManager 默认是追加模式，这里我们只读，所以没关系
+    // 但为了不污染 mock 文件，建议拷贝一份或者确保只调用查询接口
+    PersistenceManager pm(mockLogPath);
+
+    // 查询我们在 mock 文件里写的时间段
+    // 1700000000 ~ 1700000060
+    auto result = pm.queryHistoryTopK(1700000000, 1700000060, 5);
+
+    // 验证预期结果 (根据上面的 mock_history.log 内容)
+    // 华为出现 2 次 (line 1, line 3)
+    // 显卡出现 1 次
+    // 苹果出现 1 次
+    
+    bool foundHuawei = false;
+    int huaweiCount = 0;
+
+    for (const auto& p : result) {
+        std::cout << "   -> Found in Log: " << p.first << " : " << p.second << std::endl;
+        if (p.first == "华为") {
+            foundHuawei = true;
+            huaweiCount = p.second;
+        }
+    }
+
+    ASSERT_TRUE(foundHuawei);
+    ASSERT_EQ(huaweiCount, 2);
+}
+
 int main() {
     #ifdef _WIN32
     system("chcp 65001");
@@ -194,6 +285,8 @@ int main() {
     test_TextProcessor();
     test_SlidingWindow();
     test_Persistence();
+    test_FileProcessing(); 
+    test_LogReplay();
 
     std::cout << "\n🎉 ALL TESTS PASSED SUCCESSFULLY! 🎉" << std::endl;
     return 0;

@@ -8,6 +8,7 @@
 #include <sstream>
 #include <chrono>
 #include <mutex>
+#include <map> 
 
 #include "httplib.h"
 #include "json.hpp"
@@ -31,6 +32,9 @@ private:
     CommandExecutor& executor;
     httplib::Server svr;
 
+    // 【新增】静态资源搜索路径：优先 web/ 目录，兼顾构建目录结构
+    const std::vector<std::string> baseDirs = { "web/", "../web/", "./" };
+
 public:
     APIServer(SystemContext& context, CommandExecutor& exec) : ctx(context), executor(exec) {
         setupRoutes();
@@ -42,23 +46,53 @@ public:
     }
 
 private:
-    void setupRoutes() {
-        // 1. 静态页面
-        svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
-            std::string path = "dashboard.html";
-            std::ifstream ifs(path);
-            if (!ifs.is_open()) {
-                path = "../dashboard.html"; 
-                ifs.open(path);
-            }
+    // 【新增】辅助：获取文件的 MIME 类型
+    std::string getMimeType(const std::string& path) {
+        if (path.find(".html") != std::string::npos) return "text/html";
+        if (path.find(".css") != std::string::npos) return "text/css";
+        if (path.find(".js") != std::string::npos) return "text/javascript";
+        if (path.find(".json") != std::string::npos) return "application/json";
+        if (path.find(".png") != std::string::npos) return "image/png";
+        if (path.find(".jpg") != std::string::npos) return "image/jpeg";
+        return "text/plain";
+    }
 
-            if(ifs.is_open()) {
+    // 【新增】辅助：尝试从配置的目录列表中读取文件内容
+    bool readFile(const std::string& filename, std::string& outContent) {
+        for (const auto& dir : baseDirs) {
+            std::string fullPath = dir + filename;
+            std::ifstream ifs(fullPath, std::ios::binary); // 二进制读取更安全
+            if (ifs.is_open()) {
                 std::stringstream buffer;
                 buffer << ifs.rdbuf();
-                res.set_content(buffer.str(), "text/html");
+                outContent = buffer.str();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void setupRoutes() {
+        // 1. 【修改】通用静态文件处理 (HTML, CSS, JS)
+        // 正则含义：匹配所有不以 /api/ 开头的路径
+        svr.Get(R"(^/(?!api/).*)", [&](const httplib::Request& req, httplib::Response& res) {
+            std::string path = req.path;
+            
+            // 默认首页
+            if (path == "/") path = "dashboard.html";
+            
+            // 去掉开头的 / (例如 /style.css -> style.css)
+            if (!path.empty() && path.front() == '/') path.erase(0, 1);
+
+            std::string content;
+            if (readFile(path, content)) {
+                res.set_content(content, getMimeType(path));
             } else {
-                char cwd[1024]; _getcwd(cwd, sizeof(cwd));
-                std::string err = "<h1>Error: dashboard.html not found!</h1><p>Current Dir: " + std::string(cwd) + "</p>";
+                // 文件未找到
+                char cwd[1024]; 
+                _getcwd(cwd, sizeof(cwd));
+                std::string err = "<h1>404 Not Found</h1><p>File '" + path + "' not found in web/ folder.</p><p>Current Dir: " + std::string(cwd) + "</p>";
+                res.status = 404;
                 res.set_content(err, "text/html");
             }
         });
@@ -125,6 +159,7 @@ private:
                         std::this_thread::sleep_for(std::chrono::milliseconds(500));
                         std::cout << "[System] Shutting down from web request..." << std::endl;
                         svr.stop();
+                        std::exit(0); // 强制退出
                     }).detach();
                 }
             } catch (...) {
@@ -159,6 +194,10 @@ private:
                 j["sensitive_words"] = ctx.processor->getSensitiveWords();
                 j["allow_all"] = ctx.processor->isAllowAllPos();
                 j["allow_sensitive"] = ctx.processor->isAllowAllSensitive();
+                // 【新增】为了让前端能回显 tags，这里需要返回 tags
+                // 请确保 TextProcessor 中有 getAllowedTags() 方法
+                // 如果您还没加这个方法，前端的 tags 复选框刷新后会不显示选中状态
+                j["tags"] = ctx.processor->getAllowedTags(); 
             }
             res.set_content(j.dump(), "application/json");
         });
@@ -172,8 +211,15 @@ private:
                 
                 if (j.contains("tags") || j.contains("allow_all")) {
                     std::vector<std::string> tags;
-                    bool allowAll = j.value("allow_all", ctx.processor->isAllowAllPos());
-                    if (j.contains("tags")) tags = j["tags"].get<std::vector<std::string>>();
+                    // 如果前端没传 allow_all，则获取当前状态
+                    bool allowAll = j.contains("allow_all") ? j["allow_all"].get<bool>() : ctx.processor->isAllowAllPos();
+                    
+                    if (j.contains("tags")) {
+                        tags = j["tags"].get<std::vector<std::string>>();
+                    } else {
+                        // 如果前端只传了 allow_all 没传 tags，保持原 tags
+                        tags = ctx.processor->getAllowedTags();
+                    }
                     ctx.processor->setPosConfig(tags, allowAll);
                 }
 

@@ -5,6 +5,7 @@
 #include <thread>
 #include <iostream>
 #include <iomanip>
+#include <chrono>
 #include "SystemContext.h"
 #include "GlobalUtils.h"
 
@@ -130,8 +131,15 @@ public:
             // 8. 指令: 查询
             else if (std::regex_search(line, match, queryRegex)) {
                 int k = GlobalUtils::safeStoi(match[1].str(), 1, 100, 10);
+                
+                // 开始计时
+                auto start = std::chrono::high_resolution_clock::now();
                 auto list = ctx.window->getTopK(k);
-                finalOutput << "Query Top-" << k << ":\n";
+                // 结束计时
+                auto end = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+                finalOutput << "Query Top-" << k << " (Time: " << duration << " us):\n";
                 for (auto& p : list) finalOutput << p.first << " : " << p.second << "\n";
             }
             // 9. 指令: 保留时间

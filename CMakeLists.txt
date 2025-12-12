@@ -51,7 +51,13 @@ endif()
 # 复制 cppjieba 字典
 file(COPY ${CMAKE_SOURCE_DIR}/third_party/cppjieba/dict DESTINATION ${CMAKE_BINARY_DIR})
 
-# --- 修改点 2: 复制 testdata 到构建目录 ---
+# 6. 复制 Web 前端资源文件夹 ---
+# 这会将源码目录下的 web 文件夹完整复制到 build/web
+file(COPY ${CMAKE_SOURCE_DIR}/web DESTINATION ${CMAKE_BINARY_DIR})
+
+message(STATUS "已配置 Web 资源复制路径")
+
+# 7. 复制 testdata 到构建目录 ---
 # 这样在代码中读取文件时，可以使用相对路径 "./testdata/xxx.txt"
 # 如果 testdata 文件夹不存在，CMake 可能会报警告，这里加个判断（可选）
 if(EXISTS "${CMAKE_SOURCE_DIR}/test/testdata")
@@ -60,3 +66,4 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/test/testdata")
 else()
     message(WARNING "未找到 test/testdata 目录，跳过复制")
 endif()
+

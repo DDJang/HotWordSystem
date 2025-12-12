@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>热词监控与控制中心</title>
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- 引入样式文件 -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="left-col">
+        <div class="card chart-box">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>🔥 实时热词榜</h2>
+                <div id="windowInfo">Window: [Wait...]</div>
+            </div>
+
+            <div id="history-mode-overlay" class="history-overlay">
+                📂 历史回放模式：图表已冻结，不会实时更新。
+            </div>
+
+            <div id="mainChart" style="width:100%; height:90%;"></div>
+        </div>
+
+        <div class="card" style="flex: 1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                <h2 style="margin:0;">📈 趋势分析</h2>
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <span style="font-size:12px; color:#666;">阈值:</span>
+                    <input type="number" id="trendThreshold" value="2" style="width:60px; margin:0;">
+                </div>
+            </div>
+            <div style="overflow-y: auto; height: 80%;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>热词</th>
+                            <th>趋势分</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trendBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="right-col">
+        <h2 style="margin-bottom: 0;">🎮 控制台</h2>
+
+        <div>
+            <div id="log">Connecting to server...</div>
+        </div>
+
+        <!-- 时间窗口 -->
+        <div class="control-group">
+            <h3>⏳ 视图设置</h3>
+            <div class="dual-input">
+                <label>Window:</label>
+                <input type="number" id="winSize" value="600" min="1" max="86400" placeholder="1-86400">
+                <button onclick="updateWindowSize()" style="width: 60px;">应用</button>
+            </div>
+            <div class="dual-input">
+                <label>Storage:</label>
+                <input type="number" id="retSize" value="3600" min="600" max="604800" placeholder="> Window">
+                <button onclick="updateRetention()" style="width: 60px;">应用</button>
+            </div>
+            <div class="dual-input">
+                <label>Top-K:</label>
+                <input type="number" id="displayK" value="10" min="1" max="100">
+            </div>
+            <div style="font-size:11px; color:#999; text-align:right;" id="retentionInfo">Retention: -- s</div>
+        </div>
+
+        <!-- 数据模拟 -->
+        <div class="control-group">
+            <h3>📝 数据模拟</h3>
+            <div class="row">
+                <textarea id="manualInput" rows="1" placeholder="输入内容..."></textarea>
+                <button onclick="sendManualData()" style="width: 60px;">发送</button>
+            </div>
+        </div>
+
+        <!-- 过滤配置 (UI 优化版) -->
+        <div class="control-group">
+            <h3>⚙️ 过滤配置</h3>
+
+            <div id="configFeedback" class="config-feedback">
+                ✔️ 配置已更新并从当前时间戳开始生效
+            </div>
+
+            <!-- === 第一部分：词性过滤 === -->
+            <div style="margin-bottom: 20px;">
+                <div class="section-header">🏷️ 词性过滤配置</div>
+
+                <label class="toggle-row" for="cb_all">
+                    <span class="toggle-label">🟢 不过滤 (保留所有词性)</span>
+                    <div class="switch">
+                        <input type="checkbox" id="cb_all" onchange="togglePosAll(this)">
+                        <span class="slider"></span>
+                    </div>
+                </label>
+
+                <div id="posConfigArea" class="config-section">
+                    <div class="selection-hint">
+                        <strong>提示：</strong> 高亮标签代表 <strong>保留</strong> 的词性
+                    </div>
+
+                    <div class="tag-section-title">名词类</div>
+                    <div class="tag-container">
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="n"
+                                onchange="updateConfig()"><span class="tag-chip">名 (n)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="nr"
+                                onchange="updateConfig()"><span class="tag-chip">人名 (nr)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="nz"
+                                onchange="updateConfig()"><span class="tag-chip">其他专名 (nz)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="ns"
+                                onchange="updateConfig()"><span class="tag-chip">地名 (ns)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="nt"
+                                onchange="updateConfig()"><span class="tag-chip">机构 (nt)</span></label>
+                    </div>
+
+                    <div class="tag-section-title" style="margin-top: 8px;">动/形/其他</div>
+                    <div class="tag-container">
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="v"
+                                onchange="updateConfig()"><span class="tag-chip">动 (v)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="vn"
+                                onchange="updateConfig()"><span class="tag-chip">名动 (vn)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="a"
+                                onchange="updateConfig()"><span class="tag-chip">形 (a)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="eng"
+                                onchange="updateConfig()"><span class="tag-chip">英文 (eng)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="i"
+                                onchange="updateConfig()"><span class="tag-chip">成语 (i)</span></label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- === 第二部分：敏感词过滤 === -->
+            <div style="border-top: 2px solid #e5e7eb; padding-top:15px;">
+                <div class="section-header">🛡️ 敏感词过滤配置</div>
+
+                <label class="toggle-row" for="cb_sensitive_allow">
+                    <span class="toggle-label">🟢 不过滤 (保留所有敏感词)</span>
+                    <div class="switch">
+                        <input type="checkbox" id="cb_sensitive_allow" onchange="toggleSensitiveAll(this)">
+                        <span class="slider"></span>
+                    </div>
+                </label>
+
+                <div id="sensitiveConfigArea" class="config-section">
+                    <div class="input-group">
+                        <input type="text" id="newSensitive" placeholder="添加屏蔽词...">
+                        <button onclick="addSensitive()">+</button>
+                    </div>
+                    <div id="sensitiveList" class="tag-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计与报告 -->
+        <div class="control-group">
+            <h3>📊 统计与报告</h3>
+            <div class="row">
+                <button onclick="showStats()" class="success">查看性能指标</button>
+                <button onclick="genReport()" class="secondary">导出历史报告</button>
+            </div>
+        </div>
+
+        <!-- 历史回放 -->
+        <div class="control-group">
+            <h3>📂 历史回放</h3>
+            <div class="row">
+                <input type="text" id="histStart" value="00:00:00" placeholder="HH:MM:SS" maxlength="8">
+                <input type="text" id="histEnd" value="00:10:00" placeholder="HH:MM:SS" maxlength="8">
+            </div>
+            <div class="row">
+                <button onclick="viewHistory()" style="background: #8b5cf6;">回放图表</button>
+                <button id="btnBackRealtime" onclick="backToRealtime()">返回实时</button>
+            </div>
+        </div>
+
+        <!-- 系统操作 -->
+        <div class="control-group" style="border-color:#fca5a5; background:#fef2f2;">
+            <h3 style="color:#b91c1c;">⚡ 系统操作</h3>
+            <div class="row">
+                <input type="number" id="benchN" value="1000" min="1" max="100000" placeholder="Max 100000">
+                <button onclick="runBench()" class="danger">启动压力测试</button>
+            </div>
+            <button onclick="resetSystem()" class="danger" style="margin-top:5px;">清空所有数据</button>
+            <button onclick="shutdownSystem()" class="danger" style="margin-top:5px; background:#7f1d1d;">终止程序</button>
+        </div>
+    </div>
+
+    <!-- 性能统计弹窗 -->
+    <div id="statsModal" class="modal-overlay" onclick="closeStats(event)">
+        <div class="modal-content">
+            <h2 style="border-bottom:none; margin-bottom:10px;">🚀 系统性能</h2>
+            <div class="stat-row"><span>运行时间</span><span class="stat-val" id="st_time">0s</span></div>
+            <div class="stat-row"><span>处理行数</span><span class="stat-val" id="st_lines">0</span></div>
+            <div class="stat-row"><span>处理词数</span><span class="stat-val" id="st_words">0</span></div>
+            <div class="stat-row"><span>吞吐量 (QPS)</span><span class="stat-val" id="st_qps">0</span></div>
+            <div class="stat-row"><span>内存占用</span><span class="stat-val" style="color:#dc2626;" id="st_mem">0 MB</span>
+            </div>
+            <div style="text-align:right; margin-top:15px;">
+                <button onclick="closeStats(null)" class="secondary" style="width:auto;">关闭</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 引入逻辑文件 -->
+    <script src="script.js"></script>
+</body>
+
+</html>
