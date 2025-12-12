@@ -20,6 +20,7 @@ private:
     std::unordered_set<std::string> allowedTags;    // 允许的词性集合
 
     bool allowAllTags = false; // 是否允许所有词性
+    bool allowAllSensitive = false; // 【新增】敏感词开关
 
     mutable std::mutex mtx; // 互斥锁，保护配置修改
 
@@ -41,23 +42,40 @@ public:
 
         // 定义允许的词性（默认配置）
         allowedTags = { "n", "ns", "nr", "nt", "nz", "v", "vn", "a", "eng" }; 
-        allowAllTags = false; 
+        allowAllTags = false;
+        allowAllSensitive = false; // 【新增】初始化 
     }
 
-    // 【修改】统一设置词性配置 (支持 allowAll)
+    // 设置词性配置 (日志已区分)
     void setPosConfig(const std::vector<std::string>& tags, bool allowAll) {
         std::lock_guard<std::mutex> lock(mtx);
         allowedTags.clear();
         for(const auto& t : tags) allowedTags.insert(t);
         allowAllTags = allowAll;
 
-        std::cout << "[Config] POS tags updated. AllowAll=" << std::boolalpha << allowAllTags << std::endl;
+        std::cout << "[Config] POS tags updated. AllowAllPos=" << std::boolalpha << allowAllTags << std::endl;
+    }
+
+    // 【新增】单独设置敏感词开关 (解决日志混淆)
+    void setSensitiveConfig(bool allowAll) {
+        std::lock_guard<std::mutex> lock(mtx);
+        allowAllSensitive = allowAll;
+        std::cout << "[Config] Sensitive config updated. AllowAllSensitive=" << std::boolalpha << allowAllSensitive << std::endl;
     }
     
-    // 【新增】获取当前 allowAll 状态 (供 API 回显)
-    bool isAllowAll() {
+    bool isAllowAllPos() {
         std::lock_guard<std::mutex> lock(mtx);
         return allowAllTags;
+    }
+
+    bool isAllowAllSensitive() {
+        std::lock_guard<std::mutex> lock(mtx);
+        return allowAllSensitive;
+    }
+
+    std::vector<std::string> getAllowedTags() {
+        std::lock_guard<std::mutex> lock(mtx);
+        return std::vector<std::string>(allowedTags.begin(), allowedTags.end());
     }
 
     // 辅助：获取当前敏感词列表，返回值补全 std::
@@ -133,11 +151,13 @@ public:
         std::unordered_set<std::string> currentSensitive;
         std::unordered_set<std::string> currentTags;
         bool useAllTags = false;
+        bool useAllSensitive = false; // 【新增】
         {
             std::lock_guard<std::mutex> lock(mtx);
             currentSensitive = sensitiveWords;
             currentTags = allowedTags;
             useAllTags = allowAllTags; // 读取标志位
+            useAllSensitive = allowAllSensitive; // 读取配置
         }
 
         // 在分词前，先进行清洗和标准化
@@ -152,14 +172,16 @@ public:
             const std::string& word = pair.first;
             const std::string& tag = pair.second;
 
-            // 过滤逻辑：
-            // 1. 不在停用词表 AND 不在敏感词表
-            // 2. AND (允许所有词性 OR 词性在白名单中)
-            // 3. AND 长度 > 1
+            // 1. 词性判断
             bool isPosAllowed = useAllTags || (currentTags.count(tag) > 0);
+            
+            // 2. 敏感词判断 (逻辑修改)
+            // 如果是敏感词 AND (不允许保留所有敏感词) -> 也就是被屏蔽
+            bool isSensitive = (currentSensitive.count(word) > 0);
+            bool shouldFilterSensitive = isSensitive && !useAllSensitive;
 
             if (stopWords.find(word) == stopWords.end() && 
-                currentSensitive.find(word) == currentSensitive.end() && 
+                !shouldFilterSensitive && // 【修改】如果不过滤敏感词，这里就放行
                 isPosAllowed && 
                 word.size() > 1) { 
                 final_words.push_back(word);

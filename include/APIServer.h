@@ -123,7 +123,8 @@ private:
         svr.Get("/api/config", [&](const httplib::Request&, httplib::Response& res) {
             json j;
             j["sensitive_words"] = ctx.processor->getSensitiveWords();
-            j["allow_all"] = ctx.processor->isAllowAll();
+            j["allow_all"] = ctx.processor->isAllowAllPos(); // 改名以示区分，对应前端 allow_all
+            j["allow_sensitive"] = ctx.processor->isAllowAllSensitive(); 
             res.set_content(j.dump(), "application/json");
         });
 
@@ -131,15 +132,25 @@ private:
             try {
                 auto j = json::parse(req.body);
                 
+                // 1. 处理词性配置 (Tags 和 AllowAllPos)
                 if (j.contains("tags") || j.contains("allow_all")) {
                     std::vector<std::string> tags;
                     bool allowAll = false;
                     if (j.contains("tags")) tags = j["tags"].get<std::vector<std::string>>();
+                    
                     if (j.contains("allow_all")) allowAll = j["allow_all"];
-                    else allowAll = ctx.processor->isAllowAll();
+                    else allowAll = ctx.processor->isAllowAllPos();
+                    
                     ctx.processor->setPosConfig(tags, allowAll);
                 }
 
+                // 2. 【新增】处理敏感词开关 (AllowAllSensitive)
+                if (j.contains("allow_sensitive")) {
+                    bool allowSens = j["allow_sensitive"];
+                    ctx.processor->setSensitiveConfig(allowSens);
+                }
+
+                // 3. 增删敏感词
                 if (j.contains("add_sensitive")) ctx.processor->addSensitiveWord(j["add_sensitive"]);
                 if (j.contains("remove_sensitive")) ctx.processor->removeSensitiveWord(j["remove_sensitive"]);
 

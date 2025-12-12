@@ -245,16 +245,155 @@
             font-family: monospace;
         }
 
-        @keyframes popIn {
-            from {
-                transform: scale(0.9);
-                opacity: 0;
-            }
+        /* --- 标签选择器样式 --- */
+        .tag-section-title {
+            font-size: 12px;
+            color: #9ca3af;
+            margin: 8px 0 4px 0;
+            font-weight: 600;
+        }
 
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        /* 隐藏原生 checkbox */
+        .tag-chip-input {
+            display: none;
+        }
+
+        /* 自定义 Label 样式 */
+        .tag-chip {
+            background: #e5e7eb;
+            color: #374151;
+            padding: 5px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .tag-chip:hover {
+            background: #d1d5db;
+        }
+
+        /* 选中状态 */
+        .tag-chip-input:checked+.tag-chip {
+            background: #eff6ff;
+            color: #2563eb;
+            border-color: #bfdbfe;
+            font-weight: bold;
+        }
+
+        /* 禁用状态 */
+        .tag-chip-input:disabled+.tag-chip {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f3f4f6;
+        }
+
+        /* --- 新增：保留词性提示说明样式 --- */
+        .selection-hint {
+            font-size: 13px;
+            color: #2563eb;
+            background-color: #eff6ff;
+            border: 1px solid #dbeafe;
+            padding: 6px 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* --- iOS 风格滑动开关容器 --- */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            margin-bottom: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        /* 左侧文字样式 */
+        .toggle-label {
+            font-weight: bold;
+            color: #059669;
+            font-size: 14px;
+            flex: 1;
+            margin-right: 15px;
+            line-height: 1.4;
+        }
+
+        /* --- 核心：自定义滑动开关样式 --- */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        /* 滑块背景 */
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #e5e7eb;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        /* 滑块圆钮 */
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input:checked+.slider {
+            background-color: #10b981;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+        }
+
+        /* 区域过渡动画 */
+        .config-section {
+            transition: opacity 0.3s ease;
+        }
+
+        .section-header {
+            font-size: 14px;
+            font-weight: 700;
+            color: #374151;
+            margin: 0 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
     </style>
 </head>
@@ -306,19 +445,16 @@
             <h3>⏳ 视图设置</h3>
             <div class="dual-input">
                 <label>Window:</label>
-                <!-- 限制 1秒 ~ 86400秒(1天) -->
                 <input type="number" id="winSize" value="600" min="1" max="86400" placeholder="1-86400">
-                <button onclick="updateWindowSize()" style="width: 50px;">Set</button>
+                <button onclick="updateWindowSize()" style="width: 60px;">应用</button>
             </div>
             <div class="dual-input">
                 <label>Storage:</label>
-                <!-- 限制 600秒 ~ 604800秒(7天) -->
                 <input type="number" id="retSize" value="3600" min="600" max="604800" placeholder="> Window">
-                <button onclick="updateRetention()" style="width: 50px;">Set</button>
+                <button onclick="updateRetention()" style="width: 60px;">应用</button>
             </div>
             <div class="dual-input">
                 <label>Top-K:</label>
-                <!-- 限制 1 ~ 100 -->
                 <input type="number" id="displayK" value="10" min="1" max="100">
             </div>
             <div style="font-size:11px; color:#999; text-align:right;" id="retentionInfo">Retention: -- s</div>
@@ -333,40 +469,89 @@
             </div>
         </div>
 
-        <!-- 过滤配置 -->
+        <!-- 过滤配置 (UI 优化版) -->
         <div class="control-group">
             <h3>⚙️ 过滤配置</h3>
-            <div class="tag-group">
-                <!-- 【新增】允许所有 -->
-                <label class="tag-check" style="font-weight:bold; color:#2563eb;">
-                    <input type="checkbox" id="cb_all" onchange="toggleAll(this)"> 不过滤词性
+
+            <!-- === 第一部分：词性过滤 === -->
+            <div style="margin-bottom: 20px;">
+                <div class="section-header">🏷️ 词性过滤配置</div>
+
+                <!-- 词性总开关 -->
+                <label class="toggle-row" for="cb_all">
+                    <span class="toggle-label">🟢 不过滤 (保留所有词性)</span>
+                    <div class="switch">
+                        <input type="checkbox" id="cb_all" onchange="togglePosAll(this)">
+                        <span class="slider"></span>
+                    </div>
                 </label>
 
-                <!-- 分割线 -->
-                <span style="border-left:1px solid #ccc; margin:0 5px;"></span>
+                <!-- 词性配置区域 -->
+                <div id="posConfigArea" class="config-section">
+                    <div class="selection-hint">
+                        <strong>提示：</strong> 高亮标签代表 <strong>保留</strong> 的词性
+                    </div>
 
-                <!-- 常规词性 -->
-                <label class="tag-check"><input type="checkbox" class="pos-item" value="n" checked
-                        onchange="updateConfig()"> 名(n)</label>
-                <label class="tag-check"><input type="checkbox" class="pos-item" value="v" checked
-                        onchange="updateConfig()"> 动(v)</label>
-                <label class="tag-check"><input type="checkbox" class="pos-item" value="a" onchange="updateConfig()">
-                    形(a)</label>
-                <label class="tag-check"><input type="checkbox" class="pos-item" value="nr" onchange="updateConfig()">
-                    人</label>
-                <label class="tag-check"><input type="checkbox" class="pos-item" value="eng" checked
-                        onchange="updateConfig()"> Eng</label>
+                    <div class="tag-section-title">名词类</div>
+                    <div class="tag-container">
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="n"
+                                onchange="updateConfig()"><span class="tag-chip">名 (n)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="nr"
+                                onchange="updateConfig()"><span class="tag-chip">人名 (nr)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="nz"
+                                onchange="updateConfig()"><span class="tag-chip">其他专名 (nz)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="ns"
+                                onchange="updateConfig()"><span class="tag-chip">地名 (ns)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="nt"
+                                onchange="updateConfig()"><span class="tag-chip">机构 (nt)</span></label>
+                    </div>
+
+                    <div class="tag-section-title" style="margin-top: 8px;">动/形/其他</div>
+                    <div class="tag-container">
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="v"
+                                onchange="updateConfig()"><span class="tag-chip">动 (v)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="vn"
+                                onchange="updateConfig()"><span class="tag-chip">名动 (vn)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="a"
+                                onchange="updateConfig()"><span class="tag-chip">形 (a)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="eng"
+                                onchange="updateConfig()"><span class="tag-chip">英文 (eng)</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="i"
+                                onchange="updateConfig()"><span class="tag-chip">成语 (i)</span></label>
+                    </div>
+                    <!-- 已移除自定义输入框 -->
+                </div>
             </div>
 
-            <!-- 敏感词部分保持不变 -->
-            <div class="row" style="margin-top:8px;">
-                <input type="text" id="newSensitive" placeholder="屏蔽词..." style="margin-bottom:0;">
-                <button onclick="addSensitive()" style="width:40px;">+</button>
+            <!-- === 第二部分：敏感词过滤 === -->
+            <!-- 增加明显的分割线 -->
+            <div style="border-top: 2px solid #e5e7eb; padding-top:15px;">
+                <div class="section-header">🛡️ 敏感词过滤配置</div>
+
+                <!-- 敏感词总开关 -->
+                <label class="toggle-row" for="cb_sensitive_allow">
+                    <span class="toggle-label">🟢 不过滤 (保留所有敏感词)</span>
+                    <div class="switch">
+                        <input type="checkbox" id="cb_sensitive_allow" onchange="toggleSensitiveAll(this)">
+                        <span class="slider"></span>
+                    </div>
+                </label>
+
+                <!-- 敏感词输入与列表 -->
+                <div id="sensitiveConfigArea" class="config-section">
+                    <div class="row" style="margin-bottom:5px;">
+                        <input type="text" id="newSensitive" placeholder="添加屏蔽词..." style="margin-bottom:0;">
+                        <button onclick="addSensitive()"
+                            style="width:40px; height: 100%; display:flex; justify-content:center; align-items:center;">
+                            +
+                        </button>
+                    </div>
+                    <div id="sensitiveList" class="tag-container"></div>
+                </div>
             </div>
-            <div id="sensitiveList" class="tag-group" style="margin-top:5px;"></div>
         </div>
 
-        <!-- 统计与报告 (补全的功能) -->
+        <!-- 统计与报告 -->
         <div class="control-group">
             <h3>📊 统计与报告</h3>
             <div class="row">
@@ -379,7 +564,6 @@
         <div class="control-group">
             <h3>📂 历史回放</h3>
             <div class="row">
-                <!-- 增加 pattern 提示格式 -->
                 <input type="text" id="histStart" value="00:00:00" placeholder="HH:MM:SS" maxlength="8">
                 <input type="text" id="histEnd" value="00:10:00" placeholder="HH:MM:SS" maxlength="8">
             </div>
@@ -393,15 +577,11 @@
         <div class="control-group" style="border-color:#fca5a5; background:#fef2f2;">
             <h3 style="color:#b91c1c;">⚡ 系统操作</h3>
             <div class="row">
-                <!-- 限制 N 最大 100,000，防止压测卡死 -->
                 <input type="number" id="benchN" value="1000" min="1" max="100000" placeholder="Max 100000">
                 <button onclick="runBench()" class="danger">启动压力测试</button>
             </div>
             <button onclick="resetSystem()" class="danger" style="margin-top:5px;">清空所有数据</button>
-
-            <!-- 【新增】终止按钮 -->
-            <button onclick="shutdownSystem()" class="danger" style="margin-top:5px; background:#7f1d1d;">
-                终止程序</button>
+            <button onclick="shutdownSystem()" class="danger" style="margin-top:5px; background:#7f1d1d;">终止程序</button>
         </div>
     </div>
 
@@ -436,11 +616,7 @@
         // --- 核心循环 ---
         setInterval(() => {
             if (isHistoryMode) return;
-
-            // 1. 获取用户设置的 K 值
             let k = document.getElementById('displayK').value || 10;
-
-            // 2. 拼接到请求 URL 中
             fetch('/api/data?k=' + k)
                 .then(res => res.json())
                 .then(data => {
@@ -455,8 +631,6 @@
                         `Window: [${data.window_start} ~ ${data.window_end}] | Now: ${data.current_ts}`;
                     document.getElementById('retentionInfo').innerText = `Retention: ${data.retention_sec} s`;
                 });
-
-            // 趋势接口也可以加上 k，或者保持默认 10
             fetch('/api/trends?k=10').then(r => r.json()).then(list => renderTrends(list));
         }, 1000);
 
@@ -478,7 +652,6 @@
         function validateTime(id) {
             const el = document.getElementById(id);
             const val = el.value.trim();
-            // 修改为：允许1到2位数字，逻辑更宽松
             const regex = /^\d{1,2}:\d{1,2}:\d{1,2}$/;
             if (!regex.test(val)) {
                 alert(`❌ 时间格式错误: ${val}\n请使用 HH:MM:SS (例如 12:30:00)`);
@@ -487,22 +660,102 @@
             return val;
         }
 
-        // 【新增】处理 "全选" 逻辑
-        function toggleAll(el) {
+        // --- 核心：过滤配置控制逻辑 ---
+
+        // 1. 词性总开关 (联动 UI)
+        function togglePosAll(el, suppressUpdate = false) {
             const isAll = el.checked;
-            const items = document.querySelectorAll('.pos-item');
-
-            // 视觉上禁用/启用其他复选框
-            items.forEach(cb => {
-                cb.disabled = isAll;
-                // 可选：如果全选了，让其他项看起来变灰
-                cb.parentElement.style.opacity = isAll ? "0.5" : "1";
-            });
-
-            // 立即触发更新
-            updateConfig();
+            const configArea = document.getElementById('posConfigArea');
+            if (isAll) {
+                configArea.style.opacity = "0.4";
+                configArea.style.pointerEvents = "none";
+            } else {
+                configArea.style.opacity = "1";
+                configArea.style.pointerEvents = "auto";
+            }
+            if (!suppressUpdate) {
+                updateConfig(); // 只有在非抑制模式下才发送配置
+            }
         }
 
+        // 2. 敏感词总开关 (联动 UI)
+        function toggleSensitiveAll(el, suppressUpdate = false) {
+            const isAll = el.checked;
+            const configArea = document.getElementById('sensitiveConfigArea');
+            if (isAll) {
+                configArea.style.opacity = "0.4";
+                configArea.style.pointerEvents = "none";
+            } else {
+                configArea.style.opacity = "1";
+                configArea.style.pointerEvents = "auto";
+            }
+            if (!suppressUpdate) {
+                updateConfig(); // 只有在非抑制模式下才发送配置
+            }
+        }
+
+        // 3. 更新并发送配置到后端
+        function updateConfig() {
+            const allowPosAll = document.getElementById('cb_all').checked;
+            const allowSensitiveAll = document.getElementById('cb_sensitive_allow').checked;
+
+            // 收集选中的词性
+            const checks = document.querySelectorAll('.pos-item:checked');
+            let tags = [];
+            checks.forEach(c => tags.push(c.value));
+
+            apiPost('/api/config', {
+                allow_all: allowPosAll, // 词性 "允许所有"
+                allow_sensitive: allowSensitiveAll, // 新增：敏感词 "允许所有"
+                tags: tags
+            });
+        }
+
+        // 4. 加载配置并回显
+        function loadConfigState() {
+            fetch('/api/config').then(r => r.json()).then(d => {
+                // 回显敏感词列表
+                const div = document.getElementById('sensitiveList'); div.innerHTML = "";
+                if (d.sensitive_words) {
+                    d.sensitive_words.forEach(w => {
+                        const s = document.createElement('span');
+                        s.className = "tag-chip";
+                        s.style.background = "#fee2e2";
+                        s.style.color = "#b91c1c";
+                        s.style.borderColor = "#fecaca";
+                        s.innerHTML = `${w} ×`;
+                        s.onclick = () => removeSensitive(w);
+                        div.appendChild(s);
+                    });
+                }
+
+                // 回显 词性总开关
+                const cbPos = document.getElementById('cb_all');
+                cbPos.checked = d.allow_all;
+                togglePosAll(cbPos, true); // 触发一次 UI 变灰逻辑
+
+                // 回显 敏感词总开关 (假设后端返回 allow_sensitive，若无则默认false)
+                const cbSens = document.getElementById('cb_sensitive_allow');
+                cbSens.checked = !!d.allow_sensitive;
+                toggleSensitiveAll(cbSens, true); // 触发一次 UI 变灰逻辑
+
+                // 回显 选中的词性
+                if (d.tags) {
+                    const checkboxes = document.querySelectorAll('.pos-item');
+                    checkboxes.forEach(cb => cb.checked = false); // 先清空
+                    d.tags.forEach(tag => {
+                        checkboxes.forEach(cb => {
+                            if (cb.value === tag) cb.checked = true;
+                        });
+                    });
+                }
+            });
+        }
+
+        // 初始化
+        loadConfigState();
+
+        // --- 其他辅助函数 ---
         function renderTrends(list) {
             const tbody = document.getElementById('trendBody');
             const threshold = parseFloat(document.getElementById('trendThreshold').value) || 0;
@@ -517,7 +770,6 @@
             });
         }
 
-        // API 基础函数
         function apiPost(url, data) {
             log("Sending...");
             fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
@@ -528,94 +780,57 @@
             el.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
         }
 
-        // 按钮功能函数
         function updateWindowSize() {
             const s = validateNumber('winSize', 1, 86400, "Window Size");
             if (s !== null) apiPost('/api/command', { cmd: `[ACTION] SET_WINDOW S=${s}` });
         }
 
         function updateRetention() {
-            // 获取当前的 window 大小，确保存储时间 >= 窗口时间
             const winSize = parseInt(document.getElementById('winSize').value) || 0;
-            const r = validateNumber('retSize', winSize, 2592000, "Retention"); // 上限设为30天
+            const r = validateNumber('retSize', winSize, 2592000, "Retention");
             if (r !== null) apiPost('/api/command', { cmd: `[ACTION] SET_RETENTION R=${r}` });
         }
         function sendManualData() {
             const val = document.getElementById('manualInput').value;
-            if (val) { apiPost('/api/command', { cmd: val }); document.getElementById('manualInput').value = ""; }
+            if (val) {
+                apiPost('/api/command', { cmd: val }); document.getElementById('manualInput').value = "";
+
+                // 【终极修复】创建一个正则表达式来匹配 SHUTDOWN 命令
+                const shutdownRegex = /\[ACTION\]\s+SHUTDOWN/i;
+
+                // 使用 .test() 方法来检查输入值是否匹配正则表达式
+                if (shutdownRegex.test(val)) {
+                    
+                    // 如果匹配成功，执行 UI 变更逻辑
+                    setTimeout(() => {
+                        document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
+                    }, 1000);
+                }
+            }
         }
 
-        // 【修改】实时更新配置 (无需按钮)
-        function updateConfig() {
-            const allowAll = document.getElementById('cb_all').checked;
-
-            // 收集被勾选的常规 tags
-            const checks = document.querySelectorAll('.pos-item:checked');
-            const tags = Array.from(checks).map(c => c.value);
-
-            // 发送完整状态
-            apiPost('/api/config', {
-                allow_all: allowAll,
-                tags: tags
-            });
-        }
-
-        // 敏感词相关
-        // 【修改】加载初始配置 (Sync UI)
-        // 页面加载时调用一次 fetch，把后端的状态同步到前端 Checkbox
-        function loadConfigState() {
-            fetch('/api/config').then(r => r.json()).then(d => {
-                // 1. 恢复敏感词
-                const div = document.getElementById('sensitiveList'); div.innerHTML = "";
-                d.sensitive_words.forEach(w => {
-                    const s = document.createElement('span'); s.className = "badge"; s.innerHTML = `${w} ×`;
-                    s.onclick = () => removeSensitive(w); div.appendChild(s);
-                });
-
-                // 2. 【新增】恢复 allow_all 状态
-                const cbAll = document.getElementById('cb_all');
-                cbAll.checked = d.allow_all;
-
-                // 3. 触发一次 toggleAll 来设置 UI 的禁用状态 (但不发送请求，避免死循环)
-                const items = document.querySelectorAll('.pos-item');
-                items.forEach(cb => {
-                    cb.disabled = d.allow_all;
-                    cb.parentElement.style.opacity = d.allow_all ? "0.5" : "1";
-                });
-                // 注意：这里不需要设置具体的 tags checkbox，因为我们没有回传 tags list
-                // 如果你需要完全同步，后端 GET /api/config 也需要回传 current_tags
-                // 但通常 checkbox 状态保留在浏览器当前会话就够了，或者你可以让 GET 接口完善一点。
-            });
-        }
-        // 初始化时调用 (替换原来的 loadSensitive)
-        loadConfigState();
-        // ... addSensitive/removeSensitive 修改为调用 loadConfigState 或局部刷新 ...
         function addSensitive() {
             const w = document.getElementById('newSensitive').value;
             if (w) {
                 apiPost('/api/config', { add_sensitive: w });
                 document.getElementById('newSensitive').value = "";
-                setTimeout(loadConfigState, 500); // 刷新列表
+                setTimeout(loadConfigState, 500);
             }
         }
         function removeSensitive(w) {
             if (confirm("Remove " + w + "?")) {
                 apiPost('/api/config', { remove_sensitive: w });
-                setTimeout(loadConfigState, 500); // 刷新列表
+                setTimeout(loadConfigState, 500);
             }
         }
 
-        // 历史相关
         function viewHistory() {
             const s = validateTime('histStart');
             const e = validateTime('histEnd');
             if (!s || !e) return;
-
             isHistoryMode = true;
             log(`Loading History...`);
             document.getElementById('windowInfo').innerText = `MODE: HISTORY [${s} ~ ${e}]`;
-
-            // 这里也要做简单的 URL 编码防止奇怪字符
             fetch(`/api/history_view?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}`)
                 .then(r => r.json())
                 .then(d => {
@@ -624,11 +839,10 @@
         }
         function backToRealtime() {
             isHistoryMode = false;
-            myChart.setOption({ series: [{ itemStyle: { color: '#3b82f6' } }] });
+            // myChart.setOption({ series: [{ itemStyle: { color: '#3b82f6' } }] });
             log("Back to Realtime.");
         }
 
-        // 统计与报告 (新功能)
         function showStats() {
             fetch('/api/stats').then(r => r.json()).then(d => {
                 document.getElementById('st_time').innerText = d.runtime.toFixed(2) + " s";
@@ -651,7 +865,6 @@
             }
         }
 
-        // 系统操作
         function runBench() {
             const n = validateNumber('benchN', 1, 100000, "Benchmark N");
             if (n !== null) apiPost('/api/command', { cmd: `[ACTION] BENCHMARK N=${n}` });
@@ -659,11 +872,7 @@
 
         function resetSystem() {
             if (!confirm("⚠️ 警告：这将清空所有内存数据和历史日志文件，并会中断压力测试！")) return;
-
-            // 1. 发送命令清空后端 (内存 + 文件)
             apiPost('/api/command', { cmd: `[ACTION] RESET` });
-
-            // 2. 立即清空前端状态
             isHistoryMode = false;
             myChart.setOption({ xAxis: { data: [] }, series: [{ data: [], itemStyle: { color: '#3b82f6' } }] });
             document.getElementById('trendBody').innerHTML = "";
@@ -675,16 +884,11 @@
             if (!confirm("⚠️ 严重警告 ⚠️\n\n这将完全关闭服务器程序！\n所有连接将断开，您必须手动去服务器重启程序。\n\n确定要关闭吗？")) {
                 return;
             }
-
             apiPost('/api/command', { cmd: `[ACTION] SHUTDOWN` });
-
-            // 禁用界面，提示已断开
             setTimeout(() => {
                 document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
             }, 1000);
         }
-
-
     </script>
 </body>
 
