@@ -182,7 +182,14 @@ private:
             long long tStart = GlobalUtils::parseTimeSeconds(req.get_param_value("start"));
             long long tEnd = GlobalUtils::parseTimeSeconds(req.get_param_value("end"));
 
-            auto list = ctx.persistence->queryHistoryTopK(tStart, tEnd, 10);
+            // 【修复】从请求参数中获取 k 值，如果不存在则默认为 10
+            int k = 10;
+            if (req.has_param("k")) {
+                // 使用您在 /api/data 接口中用过的安全转换函数
+                k = GlobalUtils::safeStoi(req.get_param_value("k"), 1, 100, 10);
+            }
+            auto list = ctx.persistence->queryHistoryTopK(tStart, tEnd, k);
+
             json j;
             std::vector<std::string> cats;
             std::vector<int> vals;
