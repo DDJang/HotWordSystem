@@ -614,12 +614,21 @@
         var isHistoryMode = false;
 
         // --- 核心循环 ---
-        setInterval(() => {
+        var mainInterval = setInterval(() => {
             if (isHistoryMode) return;
             let k = document.getElementById('displayK').value || 10;
             fetch('/api/data?k=' + k)
                 .then(res => res.json())
                 .then(data => {
+                    // 【终极修复】在处理数据前，检查“遗言”
+                    if (data.shutdown) {
+                        // 停止后续的所有轮询
+                        clearInterval(mainInterval);
+                        // 显示关闭界面
+                        document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
+                        return; // 阻止后续代码执行
+                    }
+
                     myChart.setOption({
                         xAxis: { data: data.categories },
                         series: [{

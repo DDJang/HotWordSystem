@@ -102,9 +102,18 @@ public:
             }
             // 【新增】终止程序指令
             else if (std::regex_search(line, match, shutdownRegex)) {
-                ctx.shouldExit = true; // 设置标志位
-                ctx.abortBenchmark = true; // 停止压测
-                finalOutput << "System shutting down by remote command...\n";
+                ctx.shouldExit = true; // 1. 设置标志位
+                ctx.abortBenchmark = true;
+                finalOutput << "Shutdown initiated. Server will terminate shortly...\n";
+
+                // 2. 启动一个独立的倒计时线程，确保服务器最终会关闭
+                //    这可以防止在没有浏览器连接的情况下，服务器永远不退出的问题。
+                std::thread([](){
+                    // 等待3秒，给UI足够的时间通过轮询来发现并显示关闭状态
+                    std::this_thread::sleep_for(std::chrono::seconds(3));
+                    std::cout << "[System] Timed shutdown executing..." << std::endl;
+                    std::exit(0); // 3. 强制退出进程
+                }).detach();
             }
             // 7. 指令: 趋势
             else if (std::regex_search(line, match, trendRegex)) {

@@ -48,6 +48,14 @@ private:
 
         // 2. GET 数据接口
         svr.Get("/api/data", [&](const httplib::Request& req, httplib::Response& res) {
+            // 【终极修复】在处理任何数据前，先检查关机标志
+            if (ctx.shouldExit) {
+                json j;
+                j["shutdown"] = true; // 传递“遗言”
+                res.set_content(j.dump(), "application/json");
+                return;
+            }
+
             int k = 10;
             if (req.has_param("k")) {
                 k = GlobalUtils::safeStoi(req.get_param_value("k"), 1, 100, 10);
