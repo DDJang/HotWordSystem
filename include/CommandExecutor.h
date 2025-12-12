@@ -181,10 +181,14 @@ private:
             startTs++; 
             std::vector<std::string> words = ctx.processor->process(GlobalUtils::generateRandomSentence());
             ctx.window->addData(startTs, words);
+
+            // 【终极修复】在这里，将当前的局部时间进度，同步到全局时间戳
+            // 因为 ctx.lastTimestamp 是 std::atomic，这个赋值操作是线程安全的。
+            ctx.lastTimestamp = startTs;
+
             ctx.persistence->logData(startTs, words);
             ctx.monitor->record(static_cast<int>(words.size()));
         }
-        ctx.lastTimestamp = startTs; 
         std::cout << "[System] Benchmark finished." << std::endl;
     }
 };

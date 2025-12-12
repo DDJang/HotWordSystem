@@ -1,6 +1,0 @@
-=== History Analysis Report ===
-Log File: data/history.log
-Range Step: 60s
-===============================
-
-No data found in this time range.

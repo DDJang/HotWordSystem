@@ -50,8 +50,7 @@ private:
         svr.Get("/api/data", [&](const httplib::Request& req, httplib::Response& res) {
             int k = 10;
             if (req.has_param("k")) {
-                try { k = std::stoi(req.get_param_value("k")); } catch (...) {}
-                if (k <= 0) k = 1; if (k > 100) k = 100;
+                k = GlobalUtils::safeStoi(req.get_param_value("k"), 1, 100, 10);
             }
 
             auto topList = ctx.window->getTopK(k);

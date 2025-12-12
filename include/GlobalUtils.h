@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <limits>   // for numeric_limits
 #include <stdexcept> // for try-catch
+#include <random> // 1. 引入 <random> 头文件
+#include <sstream>
 
 class GlobalUtils {
 public:
@@ -19,24 +21,55 @@ public:
 
     // 秒数 -> 时间字符串 (HH:MM:SS)
     static std::string formatTime(long long totalSeconds) {
+        if (totalSeconds < 0) totalSeconds = 0;
+
+        // 1. 计算总天数
+        long long days = totalSeconds / 86400; // 86400 = 24 * 3600
+
+        // 2. 计算当天的小时、分钟、秒
         int h = static_cast<int>((totalSeconds / 3600) % 24);
         int m = static_cast<int>((totalSeconds / 60) % 60);
         int s = static_cast<int>(totalSeconds % 60);
+
+        // 3. 使用 stringstream 格式化输出
+        std::stringstream ss;
+        
+        // 如果天数大于0，则添加 [Day X] 前缀
+        if (days > 0) {
+            ss << "[Day " << (days + 1) << "] ";
+        }
+
+        // 格式化 HH:MM:SS 部分
         char buf[16];
         std::sprintf(buf, "%02d:%02d:%02d", h, m, s);
-        return std::string(buf);
+        ss << buf;
+
+        return ss.str();
     }
 
-    // 生成随机句子 (用于压测)
+    // 【推荐升级】生成随机句子 (用于压测)
     static std::string generateRandomSentence() {
-        static std::vector<std::string> dictionary = {"华为", "小米", "苹果", "OpenAI", "显卡", "暴跌", "上涨", "发布会"};
-        static std::vector<std::string> verbs = {"发布", "震惊", "颠覆", "宣布"};
+        // 使用静态变量，确保随机数引擎只被初始化一次
+        static std::mt19937 gen(std::random_device{}()); 
+
+        // 稍微扩充一下词典，让结果更多样
+        static std::vector<std::string> dictionary = {
+            "华为", "小米", "苹果", "OpenAI", "英伟达", "比特币", "特斯拉",
+            "显卡", "暴跌", "上涨", "发布会", "财报", "AI", "大模型"
+        };
+        static std::vector<std::string> verbs = {"发布", "震惊", "颠覆", "宣布", "推出", "超越"};
+        
+        // 使用更精确的均匀分布来选择词语
+        std::uniform_int_distribution<> dict_dist(0, dictionary.size() - 1);
+        std::uniform_int_distribution<> verb_dist(0, verbs.size() - 1);
+        std::uniform_int_distribution<> len_dist(3, 8); // 句子长度也随机化
+
         std::string s = "";
-        int len = rand() % 5 + 3;
+        int len = len_dist(gen);
         for(int i=0; i<len; i++) {
-            s += dictionary[rand() % dictionary.size()];
+            s += dictionary[dict_dist(gen)];
             if(i < len-1) {
-                s += verbs[rand() % verbs.size()];
+                s += verbs[verb_dist(gen)];
             }
         }
         return s;
