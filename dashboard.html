@@ -395,6 +395,123 @@
             align-items: center;
             gap: 5px;
         }
+
+        /* --- 新增：用于提示的脉冲动画 --- */
+        @keyframes pulse-animation {
+            0% {
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+            }
+        }
+
+        .btn-pulse {
+            animation: pulse-animation 2s infinite;
+        }
+
+        /* --- 新增：配置生效反馈提示条样式 --- */
+        .config-feedback {
+            font-size: 13px;
+            color: #166534;
+            /* 深绿色文字 */
+            background-color: #f0fdf4;
+            /* 淡绿色背景 */
+            border: 1px solid #bbf7d0;
+            /* 绿色边框 */
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            /* 与下方内容隔开 */
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            /* 核心：用于控制显示和隐藏的过渡效果 */
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            height: 0;
+            overflow: hidden;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
+
+        .config-feedback.show {
+            opacity: 1;
+            height: auto;
+            /* 高度自适应 */
+            padding-top: 8px;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+
+        /* --- 新增：用于输入框和按钮对齐的容器样式 --- */
+        .input-group {
+            display: flex;
+            align-items: center;
+            /* 核心：垂直居中对齐 */
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+
+        .input-group input {
+            flex-grow: 1;
+            /* 让输入框占据剩余空间 */
+            margin-bottom: 0;
+            /* 覆盖默认的 margin */
+        }
+
+        .input-group button {
+            flex-shrink: 0;
+            /* 防止按钮被压缩 */
+            width: 40px;
+            padding: 6px;
+            /* 调整内边距让它看起来和输入框差不多高 */
+        }
+
+        .chart-box {
+            flex: 1;
+            min-height: 300px;
+            /* 【关键】为绝对定位的子元素提供定位上下文 */
+            position: relative;
+        }
+
+        /* --- 新增：历史模式提示层样式 --- */
+        .history-overlay {
+            position: absolute;
+            top: 60px;
+            /* 定位在标题下方 */
+            left: 20px;
+            right: 20px;
+            background: rgba(139, 92, 246, 0.9);
+            /* 使用与历史图表一致的紫色，半透明 */
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 10;
+            /* 确保在图表之上 */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+
+            /* 默认隐藏，并准备动画 */
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+            /* 穿透鼠标事件，不影响下方图表的 tooltip */
+        }
+
+        .history-overlay.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
 </head>
 
@@ -406,6 +523,12 @@
                 <h2>🔥 实时热词榜</h2>
                 <div id="windowInfo">Window: [Wait...]</div>
             </div>
+
+            <!-- 【新增】历史模式提示覆盖层 -->
+            <div id="history-mode-overlay" class="history-overlay">
+                📂 历史回放模式：图表已冻结，不会实时更新。
+            </div>
+
             <div id="mainChart" style="width:100%; height:90%;"></div>
         </div>
 
@@ -473,6 +596,11 @@
         <div class="control-group">
             <h3>⚙️ 过滤配置</h3>
 
+            <!-- 【新增】配置生效的反馈提示条 -->
+            <div id="configFeedback" class="config-feedback">
+                ✔️ 配置已更新并从当前时间戳开始生效
+            </div>
+
             <!-- === 第一部分：词性过滤 === -->
             <div style="margin-bottom: 20px;">
                 <div class="section-header">🏷️ 词性过滤配置</div>
@@ -539,12 +667,10 @@
 
                 <!-- 敏感词输入与列表 -->
                 <div id="sensitiveConfigArea" class="config-section">
-                    <div class="row" style="margin-bottom:5px;">
-                        <input type="text" id="newSensitive" placeholder="添加屏蔽词..." style="margin-bottom:0;">
-                        <button onclick="addSensitive()"
-                            style="width:40px; height: 100%; display:flex; justify-content:center; align-items:center;">
-                            +
-                        </button>
+                    <!-- 【修改】使用新的 class 替换旧的 div.row 和内联样式 -->
+                    <div class="input-group">
+                        <input type="text" id="newSensitive" placeholder="添加屏蔽词...">
+                        <button onclick="addSensitive()">+</button>
                     </div>
                     <div id="sensitiveList" class="tag-container"></div>
                 </div>
@@ -569,7 +695,7 @@
             </div>
             <div class="row">
                 <button onclick="viewHistory()" style="background: #8b5cf6;">回放图表</button>
-                <button onclick="backToRealtime()">返回实时</button>
+                <button id="btnBackRealtime" onclick="backToRealtime()">返回实时</button>
             </div>
         </div>
 
@@ -602,6 +728,10 @@
     </div>
 
     <script>
+        var feedbackTimer = null;
+        var isHistoryMode = false;
+        var historyWindowText = ""; // <--- 新增：用于存储历史模式的窗口文本
+
         var myChart = echarts.init(document.getElementById('mainChart'));
         myChart.setOption({
             tooltip: { trigger: 'axis' },
@@ -633,8 +763,6 @@
          * 获取最新的实时数据并更新主图表
          */
         function fetchAndUpdateRealtimeChart() {
-            // 如果是历史模式，则不执行任何操作
-            if (isHistoryMode) return;
 
             let k = document.getElementById('displayK').value || 10;
             fetch('/api/data?k=' + k)
@@ -646,24 +774,31 @@
                         return;
                     }
 
-                    const seriesData = data.values.map((value, index) => ({
-                        value: value,
-                        id: data.categories[index]
-                    }));
+                    // 1. 只有在非历史模式下才更新图表
+                    if (!isHistoryMode) {
+                        const seriesData = data.values.map((value, index) => ({
+                            value: value,
+                            id: data.categories[index]
+                        }));
 
-                    myChart.setOption({
-                        xAxis: {
-                            data: data.categories
-                        },
-                        series: [{
-                            data: seriesData
-                        }]
-                    });
+                        myChart.setOption({
+                            xAxis: { data: data.categories },
+                            series: [{ data: seriesData }]
+                        });
+                    }
 
-                    // 更新时间戳等信息
+                    // 2. 无论在哪种模式下，都更新全局时间戳和UI上的时间
                     currentBackendTimestamp = data.current_ts;
-                    document.getElementById('windowInfo').innerText =
-                        `Window: [${data.window_start} ~ ${data.window_end}] | Now: ${data.current_ts}`;
+                    if (!isHistoryMode) {
+                        // 实时模式：更新整个状态栏
+                        document.getElementById('windowInfo').innerText =
+                            `Window: [${data.window_start} ~ ${data.window_end}] | Now: ${data.current_ts}`;
+                    } else {
+                        // 历史模式：只更新 "Now" 时间，保留历史窗口信息
+                        document.getElementById('windowInfo').innerText =
+                            `${historyWindowText} | Now: ${data.current_ts}`;
+                    }
+
                     document.getElementById('retentionInfo').innerText = `Retention: ${data.retention_sec} s`;
 
                     if (isInitialLoad) {
@@ -679,6 +814,25 @@
             fetchAndUpdateRealtimeChart();
             fetch('/api/trends?k=10').then(r => r.json()).then(list => renderTrends(list));
         }, 1000);
+
+        // 【新增】显示配置反馈的函数
+        function showConfigFeedback() {
+            const feedbackEl = document.getElementById('configFeedback');
+
+            // 如果已有定时器，先清除，防止闪烁
+            if (feedbackTimer) {
+                clearTimeout(feedbackTimer);
+            }
+
+            // 1. 立即显示提示
+            feedbackEl.classList.add('show');
+
+            // 2. 设置一个 2.5 秒后自动隐藏的定时器
+            feedbackTimer = setTimeout(() => {
+                feedbackEl.classList.remove('show');
+            }, 2500);
+        }
+
 
         // --- 通用校验函数 ---
         function validateNumber(id, min, max, name) {
@@ -755,6 +909,7 @@
                 allow_sensitive: allowSensitiveAll, // 新增：敏感词 "允许所有"
                 tags: tags
             });
+            showConfigFeedback(); // <--- 在这里调用
         }
 
         // 4. 加载配置并回显
@@ -870,12 +1025,14 @@
                 apiPost('/api/config', { add_sensitive: w });
                 document.getElementById('newSensitive').value = "";
                 setTimeout(loadConfigState, 500);
+                showConfigFeedback(); // <--- 在这里调用
             }
         }
         function removeSensitive(w) {
             if (confirm("Remove " + w + "?")) {
                 apiPost('/api/config', { remove_sensitive: w });
                 setTimeout(loadConfigState, 500);
+                showConfigFeedback(); // <--- 在这里调用
             }
         }
 
@@ -883,27 +1040,56 @@
             const s = validateTime('histStart');
             const e = validateTime('histEnd');
             if (!s || !e) return;
+
+            // 【修复第1步】获取 Top-K 输入框的值
+            const k = document.getElementById('displayK').value || 10;
+            
             isHistoryMode = true;
-            // 【修复】使用全局变量作为时间戳
+            historyWindowText = `MODE: HISTORY [${s} ~ ${e}]`; 
+            document.getElementById('windowInfo').innerText = 
+                `${historyWindowText} | Now: ${currentBackendTimestamp}`;
+            
             log(`Loading History...`, currentBackendTimestamp);
-            document.getElementById('windowInfo').innerText = `MODE: HISTORY [${s} ~ ${e}]`;
-            fetch(`/api/history_view?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}`)
+            
+            document.getElementById('btnBackRealtime').classList.add('btn-pulse');
+            document.getElementById('history-mode-overlay').classList.add('show');
+
+            // 【修复第2步】将 k 值作为参数添加到 API 请求的 URL 中
+            fetch(`/api/history_view?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}&k=${k}`)
                 .then(r => r.json())
                 .then(d => {
-                    myChart.setOption({ xAxis: { data: d.categories }, series: [{ data: d.values, itemStyle: { color: '#8b5cf6' } }] });
+                    const historySeriesData = d.values.map((value, index) => ({
+                        value: value,
+                        id: d.categories[index]
+                    }));
+
+                    myChart.setOption({
+                        xAxis: { data: d.categories },
+                        series: [{
+                            data: historySeriesData, 
+                            itemStyle: { color: '#8b5cf6' }
+                        }],
+                        grid: {
+                            top: 80
+                        }
+                    });
                 });
         }
+
         function backToRealtime() {
             isHistoryMode = false;
             log("Back to Realtime.", currentBackendTimestamp);
-            document.getElementById('windowInfo').innerText = `Window: [Wait...]`;
+
+            document.getElementById('btnBackRealtime').classList.remove('btn-pulse');
+
+            // 【新增】隐藏历史模式提示层
+            document.getElementById('history-mode-overlay').classList.remove('show');
 
             myChart.setOption({
-                series: [{
-                    itemStyle: {
-                        color: '#3b82f6'
-                    }
-                }]
+                series: [{ itemStyle: { color: '#3b82f6' } }],
+                grid: {
+                    top: '10%' // 恢复为我们在初始配置中设定的值
+                }
             });
 
             fetchAndUpdateRealtimeChart();
@@ -938,6 +1124,9 @@
 
         function resetSystem() {
             if (!confirm("⚠️ 警告：这将清空所有内存数据和历史日志文件，并会中断压力测试！")) return;
+
+            // 【新增】隐藏历史模式提示层
+            document.getElementById('history-mode-overlay').classList.remove('show');
 
             // 这里不使用 apiPost，而是手动 fetch，以便我们能控制日志的时间戳
             // 先显示正在发送

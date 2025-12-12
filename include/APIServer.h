@@ -94,6 +94,11 @@ private:
                 json resp;
                 resp["status"] = "ok";
                 resp["message"] = output;
+
+                // 【修复】增加时间戳字段
+                // 使用 GlobalUtils::formatTime 将 long long 转换为 "HH:MM:SS" 字符串
+                resp["timestamp"] = GlobalUtils::formatTime(ctx.lastTimestamp);
+
                 res.set_content(resp.dump(), "application/json");
 
                 // 【新增】检查是否需要退出系统
@@ -162,7 +167,13 @@ private:
                 if (j.contains("add_sensitive")) ctx.processor->addSensitiveWord(j["add_sensitive"]);
                 if (j.contains("remove_sensitive")) ctx.processor->removeSensitiveWord(j["remove_sensitive"]);
 
-                res.set_content("{\"status\":\"ok\"}", "application/json");
+                // 【修复】将原来的硬编码字符串响应，改为构建一个带时间戳的 JSON 对象
+                json resp;
+                resp["status"] = "ok";
+                resp["message"] = "Config updated"; // 统一提供一个消息
+                resp["timestamp"] = GlobalUtils::formatTime(ctx.lastTimestamp);
+
+                res.set_content(resp.dump(), "application/json");
             } catch(...) { res.status = 400; }
         });
 
