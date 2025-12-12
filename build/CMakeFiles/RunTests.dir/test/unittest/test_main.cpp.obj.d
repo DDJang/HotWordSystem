@@ -136,41 +136,53 @@ CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj: \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/istream.tcc \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/cassert \
  D:/mingw64/x86_64-w64-mingw32/include/assert.h \
- D:/cppRepositories/HotWordSystem/include/SlidingWindow.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/map \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_tree.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/ext/aligned_buffer.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/node_handle.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_map.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_multimap.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/erase_if.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/vector \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_uninitialized.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_vector.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_bvector.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/vector.tcc \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/deque \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_deque.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/deque.tcc \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/unordered_map \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/unordered_map.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/hashtable.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/hashtable_policy.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/enable_special_members.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/queue \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_heap.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_queue.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/algorithm \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_algo.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/algorithmfwd.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/uniform_int_dist.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_tempbuf.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/pstl/glue_algorithm_defs.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/pstl/execution_defs.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/thread \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/std_thread.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/unique_ptr.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/this_thread_sleep.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/chrono.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/ratio \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/cstdint \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/stdint.h \
+ D:/mingw64/x86_64-w64-mingw32/include/stdint.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/limits \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/ctime \
+ D:/mingw64/x86_64-w64-mingw32/include/time.h \
+ D:/mingw64/x86_64-w64-mingw32/include/_timeval.h \
+ D:/mingw64/x86_64-w64-mingw32/include/pthread_time.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/parse_numbers.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/filesystem \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/fs_fwd.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/fs_path.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/locale \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/locale_facets_nonio.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/x86_64-w64-mingw32/bits/time_members.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/x86_64-w64-mingw32/bits/messages_members.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/codecvt.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/locale_facets_nonio.tcc \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/locale_conv.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/iomanip \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/quoted_string.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/sstream \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/sstream.tcc \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/codecvt \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/ext/concurrence.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/shared_ptr.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/shared_ptr_base.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/allocated_ptr.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/ext/aligned_buffer.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/fs_dir.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/fs_ops.h \
+ D:/cppRepositories/HotWordSystem/include/GlobalUtils.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/random \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/cmath \
  D:/mingw64/x86_64-w64-mingw32/include/math.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/specfun.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/limits \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/tr1/gamma.tcc \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/tr1/special_function_util.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/tr1/bessel_function.tcc \
@@ -183,32 +195,22 @@ CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj: \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/tr1/poly_hermite.tcc \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/tr1/poly_laguerre.tcc \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/tr1/riemann_zeta.tcc \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/mutex \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/chrono.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/ratio \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/cstdint \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/stdint.h \
- D:/mingw64/x86_64-w64-mingw32/include/stdint.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/ctime \
- D:/mingw64/x86_64-w64-mingw32/include/time.h \
- D:/mingw64/x86_64-w64-mingw32/include/_timeval.h \
- D:/mingw64/x86_64-w64-mingw32/include/pthread_time.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/parse_numbers.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/std_mutex.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/unique_lock.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/condition_variable \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/shared_ptr.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/shared_ptr_base.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/allocated_ptr.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/unique_ptr.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/ext/concurrence.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/thread \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/std_thread.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/this_thread_sleep.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/utility \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_relops.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/random.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/uniform_int_dist.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/x86_64-w64-mingw32/bits/opt_random.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/pmmintrin.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/emmintrin.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/xmmintrin.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/mmintrin.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/mwaitintrin.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/random.tcc \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/numeric \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_numeric.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/pstl/glue_numeric_defs.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/pstl/execution_defs.h \
  D:/cppRepositories/HotWordSystem/include/TextProcessor.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/memory \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_tempbuf.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_raw_storage_iter.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/align.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/shared_ptr_atomic.h \
@@ -218,38 +220,54 @@ CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj: \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/pstl/glue_memory_defs.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/unordered_set \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/unordered_set.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/hashtable.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/hashtable_policy.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/enable_special_members.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/node_handle.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/erase_if.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/fstream \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/codecvt.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/x86_64-w64-mingw32/bits/basic_file.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/x86_64-w64-mingw32/bits/c++io.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/fstream.tcc \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/algorithm \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_algo.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/algorithmfwd.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_heap.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/pstl/glue_algorithm_defs.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/mutex \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/std_mutex.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/unique_lock.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/condition_variable \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/utility \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_relops.h \
  D:/cppRepositories/HotWordSystem/third_party/cppjieba/include/cppjieba/Jieba.hpp \
  D:/cppRepositories/HotWordSystem/third_party/cppjieba/include/cppjieba/QuerySegment.hpp \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/set \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_tree.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_set.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_multiset.h \
  D:/cppRepositories/HotWordSystem/third_party/cppjieba/deps/limonp/include/limonp/Logging.hpp \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/sstream \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/sstream.tcc \
  D:/cppRepositories/HotWordSystem/third_party/cppjieba/include/cppjieba/DictTrie.hpp \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/cstring \
  D:/mingw64/x86_64-w64-mingw32/include/string.h \
  D:/mingw64/x86_64-w64-mingw32/include/sec_api/string_s.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/deque \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_deque.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/deque.tcc \
  D:/cppRepositories/HotWordSystem/third_party/cppjieba/deps/limonp/include/limonp/StringUtil.hpp \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/map \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_map.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_multimap.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/stdarg.h \
  D:/mingw64/x86_64-w64-mingw32/include/stdarg.h \
  D:/mingw64/x86_64-w64-mingw32/include/_mingw_stdarg.h \
  D:/mingw64/x86_64-w64-mingw32/include/memory.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/functional \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/std_function.h \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/unordered_map \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/unordered_map.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/array \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/compare \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/locale \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/locale_facets_nonio.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/x86_64-w64-mingw32/bits/time_members.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/x86_64-w64-mingw32/bits/messages_members.h \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/locale_facets_nonio.tcc \
- D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/locale_conv.h \
  D:/mingw64/x86_64-w64-mingw32/include/sys/types.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/iterator \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stream_iterator.h \
@@ -257,6 +275,8 @@ CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj: \
  D:/cppRepositories/HotWordSystem/third_party/cppjieba/include/cppjieba/Unicode.hpp \
  D:/cppRepositories/HotWordSystem/third_party/cppjieba/deps/limonp/include/limonp/LocalVector.hpp \
  D:/cppRepositories/HotWordSystem/third_party/cppjieba/include/cppjieba/Trie.hpp \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/queue \
+ D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_queue.h \
  D:/cppRepositories/HotWordSystem/third_party/cppjieba/deps/limonp/include/limonp/StdExtension.hpp \
  D:/cppRepositories/HotWordSystem/third_party/cppjieba/include/cppjieba/SegmentBase.hpp \
  D:/cppRepositories/HotWordSystem/third_party/cppjieba/include/cppjieba/PreFilter.hpp \
@@ -274,4 +294,6 @@ CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj: \
  D:/cppRepositories/HotWordSystem/third_party/utfcpp/source/utf8/cpp17.h \
  D:/cppRepositories/HotWordSystem/third_party/utfcpp/source/utf8/cpp11.h \
  D:/cppRepositories/HotWordSystem/third_party/utfcpp/source/utf8/checked.h \
- D:/cppRepositories/HotWordSystem/third_party/utfcpp/source/utf8/unchecked.h
+ D:/cppRepositories/HotWordSystem/third_party/utfcpp/source/utf8/unchecked.h \
+ D:/cppRepositories/HotWordSystem/include/SlidingWindow.h \
+ D:/cppRepositories/HotWordSystem/include/PersistenceManager.h

@@ -1,149 +1,189 @@
+# 🔥 HotWordSystem - 高性能实时热词分析系统
 
+**HotWordSystem** 是一个基于 C++17 开发的高性能实时文本流分析引擎。它能够接收连续的文本输入，进行实时分词、清洗，并利用**动态滑动窗口算法**统计热词频率（Top-K）与趋势变化。
 
-# 热词统计与分析系统设计文档
-
-## 1. 背景假设与外部依赖
-
-### 1.1 项目背景
-随着互联网信息的爆炸式增长，对海量文本数据流进行实时监控、舆情分析和趋势预测变得至关重要。本系统旨在构建一个高性能的实时热词统计平台，能够处理流式文本数据，维护特定时间窗口内的词频分布，并提供实时 Top-K 查询、趋势分析及可视化展示功能。
-
-### 1.2 场景假设
-1.  **流式数据**：数据以“流”的形式不断到达，而非一次性静态数据集。
-2.  **时间语义**：系统基于数据的“事件时间”（Event Time）进行处理，而非服务器物理时间，从而支持历史数据回放和乱序数据处理。
-3.  **乱序容忍**：网络传输可能导致数据到达顺序与生成顺序不一致（迟到/乱序），系统需具备一定的乱序纠正能力。
-4.  **高并发**：系统需在短时间内处理大量突发文本（通过 Benchmark 验证）。
-
-### 1.3 外部依赖与开源许可
-为了避免重复造轮子并保证工程质量，本项目引用了以下开源库（Header-only，易于集成）：
-
-| 依赖库名称 | 版本 | 许可证 (License) | 用途 |
-| :--- | :--- | :--- | :--- |
-| **cppjieba** | v5.0 | MIT License | 中文分词、词性标注 (POS Tagging) |
-| **cpp-httplib** | v0.14 | MIT License | 轻量级 HTTP Server，提供 REST API |
-| **nlohmann/json** | v3.11 | MIT License | C++ 对象与 JSON 格式的序列化/反序列化 |
-| **CMake** | v3.10+ | BSD-3-Clause | 项目构建与依赖管理 |
+该项目内置了一个轻量级 Web 服务器，提供可视化的 **Dashboard**，支持实时图表展示、历史回放、动态配置以及系统压测。
 
 ---
 
-## 2. 模块/架构图与数据流
+## ✨ 项目核心亮点 (Special Features)
 
-### 2.1 系统分层架构
-系统采用经典的分层架构设计，实现了核心计算与交互展示的分离，保证了系统的扩展性和可维护性。
+本项目并非简单的计数器，其底层设计包含多个特殊优化：
 
+1.  **双层滑动窗口架构 (Dual-Layer Sliding Window)**
+    *   **物理存储层 (Storage)**：保留较长周期的原始数据（如 1 小时），防止数据丢失。
+    *   **逻辑视图层 (Logical View)**：仅统计当前窗口（如 10 分钟）内的热度。
+    *   **优势**：支持**动态调整窗口大小**（例如从 10秒 瞬间切换到 1小时），系统能立即利用物理层数据重建视图，实现无损的“时间伸缩”。
+
+2.  **高性能与并发安全**
+    *   核心统计模块采用细粒度锁与原子操作，确保高并发下的数据一致性。
+    *   引入**内存硬顶限制 (Hard Cap)**，防止在极端数据量下发生 OOM (内存溢出)。
+    *   支持多线程 Web 服务与主业务逻辑分离。
+
+3.  **动态热更新配置**
+    *   无需重启即可动态调整**敏感词库**。
+    *   支持动态切换**词性过滤策略**（如仅看名词、动词，或保留所有）。
+    *   所有配置通过 Web 界面即时生效。
+
+4.  **全栈可视化监控**
+    *   内置 **ECharts** 前端大屏，实时刷新 QPS、内存占用和热词榜单。
+    *   支持**历史数据回放**功能，可指定任意过去的时间段生成分析快照。
+
+5.  **健壮性设计**
+    *   完善的输入校验（防越界、防注入）。
+    *   支持优雅停机（Graceful Shutdown）。
+
+---
+
+## 🛠️ 构建指南 (Build Instructions)
+
+### 前置依赖
+*   **C++ 编译器**: 支持 C++17 标准 (GCC 8+, Clang 6+, MSVC 2019+)。
+*   **CMake**: 版本 3.10 或以上。
+*   **操作系统**: Windows / Linux / macOS。
+
+### 第三方库 (已包含在 `third_party/` 中)
+*   `cppjieba`: 中文分词库。
+*   `httplib`: 轻量级 HTTP 服务器。
+*   `nlohmann/json`: JSON 解析库。
+*   `utfcpp`: UTF-8 编码处理。
+
+### 编译步骤
+
+1.  **克隆项目**
+    ```bash
+    git clone https://github.com/your-repo/HotWordSystem.git
+    cd HotWordSystem
+    ```
+
+2.  **创建构建目录**
+    ```bash
+    mkdir build
+    cd build
+    ```
+
+3.  **运行 CMake 配置**
+    ```bash
+    cmake ..
+    ```
+
+4.  **编译项目**
+    *   **Linux/Mac**:
+        ```bash
+        make -j4
+        ```
+    *   **Windows**:
+        ```bash
+        cmake --build . --config Release
+        ```
+
+5.  **文件检查**
+    编译完成后，`build` 目录下会自动复制 `dict/` 文件夹（分词字典）和 `dashboard.html`（前端页面）。确保它们存在。
+
+---
+
+## 🚀 运行与使用 (Usage)
+
+### 1. 启动系统
+在 `build` 目录下运行生成的可执行文件：
+
+*   **Windows**: `.\Release\HotWordSystem.exe` (或 `.\HotWordSystem.exe`)
+*   **Linux/Mac**: `./HotWordSystem`
+
+启动后，控制台将显示：
 ```text
-+-----------------------------------------------------------+
-|                  Presentation Layer (表现层)              |
-|   [Web Dashboard (HTML/JS/ECharts)]   [CLI Console]       |
-+-----------------------------^-----------------------------+
-                              | HTTP / Stdout
-+-----------------------------v-----------------------------+
-|                  Service Layer (服务层)                   |
-|   [Web Server (Thread)]  <--->  [Command Processor]       |
-+-----------------------------------------------------------+
-                              |
-+-----------------------------v-----------------------------+
-|                  Core Logic Layer (核心逻辑层)            |
-|  [SlidingWindow Manager]       [Top-K Analyzer]           |
-|  (Map: Time->Words)            (Min-Heap Algo)            |
-|  (HashMap: Word->Count)        (Trend Analysis)           |
-+-----------------------------^-----------------------------+
-                              |
-+-----------------------------v-----------------------------+
-|                Preprocessing Layer (预处理层)             |
-|  [TextProcessor] -> Jieba分词 -> 停用词过滤 -> 词性筛选   |
-+-----------------------------^-----------------------------+
-                              |
-+-----------------------------v-----------------------------+
-|              Infrastructure Layer (基础设施层)            |
-|  [Persistence (WAL Log)]       [Performance Monitor]      |
-+-----------------------------------------------------------+
+[Web] GUI Server running at http://localhost:8080
+[Ready] System Online. Use Web UI or Console.
 ```
 
-### 2.2 数据流向 (Data Pipeline)
-1.  **输入 (Ingestion)**：原始文本流（带时间戳）通过 CLI 或 Web API 进入系统。
-2.  **清洗 (Cleaning)**：`TextProcessor` 调用 Jieba 进行分词，剔除停用词（如“的”、“是”），并根据词性（保留名词 n、动词 v 等）过滤无意义词汇。
-3.  **窗口更新 (Windowing)**：清洗后的词列表进入 `SlidingWindow`。
-    *   若为新数据：插入历史记录，更新全局计数器。
-    *   若为迟到数据：根据时间戳插入历史记录的正确位置（利用 `std::map` 自动排序）。
-    *   **淘汰机制**：检查队头数据是否超出窗口范围，若过期则从全局计数器中扣除。
-4.  **查询 (Querying)**：
-    *   **Top-K**：遍历全局计数器，维护一个小顶堆，提取前 K 个高频词。
-    *   **趋势**：对比窗口前半段与后半段的词频变化，计算增长斜率。
-5.  **展示 (Rendering)**：结果序列化为 JSON，推送到前端 ECharts 进行渲染。
+### 2. 访问控制台
+打开浏览器访问：**[http://localhost:8080](http://localhost:8080)**
+
+您将看到可视化控制台，包含以下功能区：
+*   **实时热词榜**：动态柱状图。
+*   **控制台**：视图设置（Window/Top-K）、数据模拟、系统操作。
+*   **过滤配置**：勾选保留的词性或管理敏感词。
+
+### 3. 数据交互方式
+
+#### 方式 A：通过 Web UI (推荐)
+*   在“数据模拟”输入框中输入文本，点击发送。
+*   使用“系统操作”中的“启动压力测试”来模拟海量数据。
+
+#### 方式 B：通过 HTTP API (编程接入)
+您可以编写 Python/Java 脚本向系统推送数据：
+```bash
+# 推送数据
+curl -X POST http://localhost:8080/api/command -d '{"cmd": "华为发布了新手机"}'
+
+# 带有特定时间戳的数据
+curl -X POST http://localhost:8080/api/command -d '{"cmd": "[12:00:01] 指定时间的文本"}'
+```
+
+#### 方式 C：通过标准输入 (CLI)
+直接在运行程序的黑色终端窗口中输入文本并回车。
 
 ---
 
-## 3. 核心数据结构设计与复杂度分析
+## ⚙️ 核心指令说明
 
-### 3.1 实时计数器 (Word Frequency)
-*   **设计**：使用 `std::unordered_map<string, int>`。
-*   **理由**：提供 $O(1)$ 的平均查找和插入复杂度，适合高频更新的场景。
-*   **复杂度**：插入/更新 $O(1)$。
+系统支持通过文本指令控制（可以在 Web 模拟框或 CLI 输入）：
 
-### 3.2 窗口历史记录 (Time-Series History)
-*   **设计**：使用 `std::map<long long, vector<string>>`。
-    *   Key: 时间戳（秒级）
-    *   Value: 该秒内发生的所有词
-*   **设计取舍**：
-    *   *方案A（队列 `std::deque`）*：插入 $O(1)$，但无法处理乱序/迟到数据。
-    *   *方案B（红黑树 `std::map`）*：**选用此方案**。虽然插入是 $O(\log T)$（T为窗口内的秒数），但它天然有序，能够完美处理乱序数据插入，且过期淘汰只需删除头部迭代器 (`begin()`)，效率极高。
-*   **复杂度**：插入 $O(\log T)$，删除头部 $O(1)$ (amortized)。
-
-### 3.3 Top-K 维护结构
-*   **设计**：使用 `std::priority_queue` (最小堆) + `std::vector`。
-*   **算法流程**：
-    1.  遍历哈希表中的 $N$ 个词。
-    2.  维护一个大小为 $K$ 的小顶堆。
-    3.  若当前词频大于堆顶，则弹出堆顶并插入新词。
-    4.  最后堆中剩余的就是 Top-K。
-*   **复杂度**：$O(N \log K)$。
-    *   相比全排序的 $O(N \log N)$，当 $K \ll N$ 时性能提升显著。
-
-### 3.4 趋势分析 (Trend Analysis)
-*   **设计**：基于窗口分片的差分计算。
-*   **算法**：利用 `map` 的 `lower_bound` 快速定位到窗口的中间时间点，将数据划分为 [Start, Mid) 和 [Mid, Current] 两段，分别统计词频并计算 Delta。
+| 指令格式 | 说明 |
+| :--- | :--- |
+| `[12:00:00] 文本内容` | 注入指定时间戳的数据 |
+| `[ACTION] SET_WINDOW S=600` | 将滑动窗口大小设置为 600秒 |
+| `[ACTION] BENCHMARK N=1000` | 启动 1000 条数据的自动压测 |
+| `[ACTION] RESET` | **清空**所有数据、日志并重置时间戳 |
+| `[ACTION] SHUTDOWN` | 安全终止服务器进程 |
+| `[ACTION] HISTORY START=.. END=..` | 生成历史报告 (通常由 UI 触发) |
 
 ---
 
-## 4. 滑动窗口定义与实时性保证
+## 📂 项目目录结构
 
-### 4.1 滑动窗口语义
-*   **类型**：基于事件时间（Event Time）的固定长度滑动窗口。
-*   **窗口大小**：默认为 600秒（10分钟），支持动态配置 (`SET_WINDOW`)。
-*   **淘汰策略 (Eviction Policy)**：**惰性淘汰 (Lazy Eviction)**。
-    *   每次有新数据写入 (`addData`) 或窗口大小改变时，触发检查。
-    *   阈值计算：`Threshold = CurrentMaxTime - WindowSize`。
-    *   逻辑：`while (History.begin()->Time <= Threshold) { Remove(); }`
-    *   这保证了窗口永远只保留“当前时刻”往前推 $N$ 秒的数据。
-
-### 4.2 实时性与并发控制
-*   **并发模型**：
-    *   **主线程**：负责 CLI 输入处理、核心计算。
-    *   **Web线程**：负责响应 HTTP 请求。
-*   **锁策略**：使用 `std::mutex` + `std::lock_guard` 保护核心数据结构 (`SlidingWindow`)。由于内存操作极快（微妙级），粗粒度锁足以支撑高并发查询，避免了复杂的无锁编程带来的风险。
-*   **迟到处理**：通过 `Timestamp < Threshold` 判断数据是否过旧；若未过旧但乱序，通过 `std::map` 自动归位，保证统计结果的最终一致性。
+```text
+HotWordSystem/
+├── CMakeLists.txt          # 构建脚本
+├── include/                # 头文件 (核心逻辑)
+│   ├── APIServer.h         # Web 服务器逻辑
+│   ├── CommandExecutor.h   # 指令解析与执行
+│   ├── GlobalUtils.h       # 通用工具 (时间、转换)
+│   ├── PerformanceMonitor.h# 性能监控
+│   ├── PersistenceManager.h# 持久化与日志
+│   ├── SlidingWindow.h     # 滑动窗口算法 (核心)
+│   ├── SystemContext.h     # 全局上下文管理
+│   └── TextProcessor.h     # 分词与文本清洗
+├── src/
+│   └── main.cpp            # 程序入口
+├── test/                   # 单元测试
+│   └── unittest/
+│       └── test_main.cpp   # 测试入口
+├── dict/                   # Jieba 分词字典文件
+├── third_party/            # 第三方依赖库
+└── dashboard.html          # 前端可视化界面
+```
 
 ---
 
-## 5. 性能优化与资源评估方法
+## 🧪 运行测试
 
-### 5.1 性能优化措施
-1.  **预处理过滤**：引入 **POS Tagging (词性标注)**，仅保留名词、动词等实词，过滤掉“的、了、呢”等高频虚词。这极大地减少了 `unordered_map` 的大小，降低了 Top-K 计算的基数 $N$。
-2.  **内存管理**：在滑动窗口淘汰时，若某词频降为 0，立即从 `unordered_map` 中 `erase`，防止 Map 无限膨胀（内存泄漏）。
-3.  **IO 优化**：持久化模块 (`PersistenceManager`) 采用追加写入模式 (`ios::app`)，避免重写整个文件；Web Server 采用非阻塞分离线程。
+项目包含完整的单元测试，用于验证算法准确性。
 
-### 5.2 资源评估
-*   **时间复杂度**：
-    *   单条数据处理：$O(L + \log T)$，其中 $L$ 为分词长度，$T$ 为窗口时间跨度。
-    *   Top-K 查询：$O(M \log K)$，其中 $M$ 为窗口内唯一词汇量。
-*   **空间复杂度**：
-    *   $Space \approx M \times (\text{avg\_word\_len} + \text{struct\_overhead}) + T \times \text{msg\_volume}$。
-*   **实测数据 (Benchmark)**：
-    *   测试环境：Intel Core i7 / 16GB RAM / Windows 10
-    *   输入速率：50,000 lines/sec (模拟压测)
-    *   吞吐量 (QPS)：**> 40,000 ops/sec**
-    *   内存占用：在 10万条数据堆积下，物理内存占用约 **20 MB**。
-    *   延迟：Top-10 查询延迟 < 5ms。
+1.  在 `build` 目录下。
+2.  运行测试程序：
+    *   Windows: `.\RunTests.exe`
+    *   Linux/Mac: `./RunTests`
+3.  如果输出 `🎉 ALL TESTS PASSED SUCCESSFULLY! 🎉`，说明系统功能正常。
 
-### 5.3 监控手段
-系统内置 `PerformanceMonitor` 模块，利用 `GetProcessMemoryInfo` API 实时采集进程的 Working Set (物理内存) 和 QPS，并通过 Web 界面实时反馈，实现了系统健康状态的可观测性。
+---
+
+## ⚠️ 注意事项
+
+*   **字典路径**: 程序启动时必须能找到 `dict/` 目录。CMake 会自动处理，但如果手动移动了 `.exe`，请连同 `dict` 文件夹和 `dashboard.html` 一起移动。
+*   **内存使用**: 默认配置下，为了防止 OOM，系统限制最大存储条目为 50万条。可通过 `SlidingWindow.h` 修改 `MAX_STORAGE_ENTRIES`。
+
+---
+
+**Author**: DDJang
+**License**: MIT
