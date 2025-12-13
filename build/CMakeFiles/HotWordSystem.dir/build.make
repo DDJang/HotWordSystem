@@ -76,15 +76,15 @@ CMakeFiles/HotWordSystem.dir/src/main.cpp.obj: CMakeFiles/HotWordSystem.dir/incl
 CMakeFiles/HotWordSystem.dir/src/main.cpp.obj: D:/cppRepositories/HotWordSystem/src/main.cpp
 CMakeFiles/HotWordSystem.dir/src/main.cpp.obj: CMakeFiles/HotWordSystem.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=D:\cppRepositories\HotWordSystem\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/HotWordSystem.dir/src/main.cpp.obj"
-	D:\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/HotWordSystem.dir/src/main.cpp.obj -MF CMakeFiles\HotWordSystem.dir\src\main.cpp.obj.d -o CMakeFiles\HotWordSystem.dir\src\main.cpp.obj -c D:\cppRepositories\HotWordSystem\src\main.cpp
+	D:\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/HotWordSystem.dir/src/main.cpp.obj -MF CMakeFiles\HotWordSystem.dir\src\main.cpp.obj.d -o CMakeFiles\HotWordSystem.dir\src\main.cpp.obj -c D:\cppRepositories\HotWordSystem\src\main.cpp
 
 CMakeFiles/HotWordSystem.dir/src/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/HotWordSystem.dir/src/main.cpp.i"
-	D:\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E D:\cppRepositories\HotWordSystem\src\main.cpp > CMakeFiles\HotWordSystem.dir\src\main.cpp.i
+	D:\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E D:\cppRepositories\HotWordSystem\src\main.cpp > CMakeFiles\HotWordSystem.dir\src\main.cpp.i
 
 CMakeFiles/HotWordSystem.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/HotWordSystem.dir/src/main.cpp.s"
-	D:\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S D:\cppRepositories\HotWordSystem\src\main.cpp -o CMakeFiles\HotWordSystem.dir\src\main.cpp.s
+	D:\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S D:\cppRepositories\HotWordSystem\src\main.cpp -o CMakeFiles\HotWordSystem.dir\src\main.cpp.s
 
 # Object files for target HotWordSystem
 HotWordSystem_OBJECTS = \
