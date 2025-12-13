@@ -1,6 +1,6 @@
 var feedbackTimer = null;
 var isHistoryMode = false;
-var historyWindowText = ""; 
+var historyWindowText = "";
 
 var myChart = echarts.init(document.getElementById('mainChart'));
 myChart.setOption({
@@ -261,14 +261,14 @@ function viewHistory() {
     if (!s || !e) return;
 
     const k = document.getElementById('displayK').value || 10;
-    
+
     isHistoryMode = true;
-    historyWindowText = `MODE: HISTORY [${s} ~ ${e}]`; 
-    document.getElementById('windowInfo').innerText = 
+    historyWindowText = `MODE: HISTORY [${s} ~ ${e}]`;
+    document.getElementById('windowInfo').innerText =
         `${historyWindowText} | Now: ${currentBackendTimestamp}`;
-    
+
     log(`Loading History...`, currentBackendTimestamp);
-    
+
     document.getElementById('btnBackRealtime').classList.add('btn-pulse');
     document.getElementById('history-mode-overlay').classList.add('show');
 
@@ -283,7 +283,7 @@ function viewHistory() {
             myChart.setOption({
                 xAxis: { data: d.categories },
                 series: [{
-                    data: historySeriesData, 
+                    data: historySeriesData,
                     itemStyle: { color: '#8b5cf6' }
                 }],
                 grid: {
@@ -348,6 +348,11 @@ function resetSystem() {
             myChart.setOption({ xAxis: { data: [] }, series: [{ data: [], itemStyle: { color: '#3b82f6' } }] });
             document.getElementById('trendBody').innerHTML = "";
             document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
+            // 3. 【核心修复】在这里，手动移除“返回实时”按钮的脉冲效果
+            document.getElementById('btnBackRealtime').classList.remove('btn-pulse');
+
+            // 4. (可选但推荐) 同时，也应该隐藏历史模式的提示条
+            document.getElementById('history-mode-overlay').classList.remove('show');
             log("✅ System & Log Cleared.", "00:00:00");
         })
         .catch(e => {
