@@ -27,7 +27,7 @@ body {
 .right-col {
     flex: 1;
     background: transparent; /* 去掉大背景 */
-    padding: 10px 10px 0;        /* 稍微留点左右边距 */
+    padding: 0 10px;        /* 稍微留点左右边距 */
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -923,4 +923,62 @@ input:checked+.slider:before {
 .shutdown-btn-header svg {
     width: 20px; /* -> 图标增大 */
     height: 20px;/* -> 图标增大 */
+}
+
+
+
+/* style.css -> 替换所有 #right-col-header 相关的旧样式 */
+/* 1. 粘性头部容器：本身透明，为子元素和伪元素提供定位基准 */
+#right-col-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding-top: 10px;
+    background: transparent; /* 必须为透明，以便 ::after 的 backdrop-filter 生效 */
+
+    margin: 0 -10px;      /* -> 新增：向左右各拉伸 10px */
+    padding: 10px 10px 0; /* -> 修改：恢复顶部和左右的内边距 */
+}
+
+/* 2. 顶部行（标题+按钮）的布局 */
+#right-col-header-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+/* 3. 使用 ::before 伪元素来创建“看得见的”实体背景 */
+/*    这个背景只覆盖标题和日志框的区域 */
+#right-col-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1; /* 把它放在内容层的后面 */
+    background: var(--bg); /* 我们看到的实心背景 */
+}
+
+/* 4. 使用 ::after 伪元素创建“磨砂玻璃过渡区域” (核心修正) */
+#right-col-header::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 100%;
+
+    /* 关键：将过渡区域定位在粘性头部的正下方 */
+    top: 100%; 
+    height: 60px; /* 过渡区域的高度 */
+
+    /* a) “磨砂玻璃”的半透明底色 */
+    background: rgba(243, 244, 246, 0.7); /* 使用背景色+70%不透明度 */
+
+    /* b) “磨砂玻璃”的模糊效果 */
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+
+    /* c) 让整个“磨砂玻璃”区域从上到下平滑消失 */
+    -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+    mask-image: linear-gradient(to bottom, black, transparent);
+    
+    pointer-events: none;
 }
