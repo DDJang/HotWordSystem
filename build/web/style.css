@@ -1201,3 +1201,29 @@ textarea:focus {
     width: auto;
     font-size: 14px;
 }
+
+
+
+/* ============================================= */
+/* == 右侧栏底部渐变遮罩 (解决底部突兀问题) == */
+/* ============================================= */
+.right-col::after {
+    content: '';
+    position: sticky; /* -> 让它能固定在底部 */
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px; /* -> 遮罩的高度 */
+    
+    /* 
+       【核心】
+       创建一个从上到下、由完全透明过渡到页面背景色的渐变。
+       这个渐变会覆盖在滚动内容的末尾。
+    */
+    background: linear-gradient(to bottom, transparent, var(--bg));
+    
+    /* 
+       确保这个遮罩层不会干扰你点击滚动条或者最底部的元素
+    */
+    pointer-events: none;
+}
