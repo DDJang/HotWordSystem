@@ -10,8 +10,9 @@ body {
     display: flex;
     gap: 20px;
     padding: 20px;
-    height: 95vh;
+    height: 100vh; /* 强制占满全屏高度 */
     box-sizing: border-box;
+    overflow: hidden; /* 禁止整个网页出现滚动条，只允许内部滚动 */
 }
 
 .left-col {
@@ -19,6 +20,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    height: 100%; /* 确保左侧栏填满高度 */
+    min-height: 0; /* Flex 布局下的关键属性，防止子元素溢出 */
 }
 
 .right-col {
@@ -26,11 +29,13 @@ body {
     background: var(--card);
     border-radius: 12px;
     padding: 20px;
-    overflow-y: auto;
+    overflow-y: auto; /* 右侧内容过多时内部滚动 */
     display: flex;
     flex-direction: column;
     gap: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    height: 100%; /* 确保右侧栏填满高度 */
+    box-sizing: border-box; /* 包含 padding */
 }
 
 .card {
