@@ -1106,3 +1106,22 @@ textarea:focus {
     /* 移除浏览器默认的、丑陋的蓝色外框 */
     outline: none;
 }
+
+
+/* 通用信息弹窗的内容样式 */
+.info-modal-content {
+    margin: 15px 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #4b5563;
+}
+.info-modal-content p {
+    margin: 0 0 10px 0;
+}
+.info-modal-content strong {
+    color: #1f2937;
+}
+.info-modal-content .highlight-blue {
+    color: #2563eb;
+    font-weight: bold;
+}

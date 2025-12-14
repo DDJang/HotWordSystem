@@ -394,6 +394,19 @@
         </div>
     </div>
 
+    <!--通用信息说明弹窗 -->
+    <div id="infoModal" class="modal-overlay" onclick="closeInfoModal(event)">
+        <div class="modal-content" style="width: 400px;">
+            <h2 id="infoModalTitle"></h2> <!-- 标题将由JS填充 -->
+            <div id="infoModalContent" class="info-modal-content">
+                <!-- 内容将由JS填充 -->
+            </div>
+            <div class="modal-actions">
+                <button onclick="closeInfoModal(null)">关闭</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 引入逻辑文件 -->
     <script src="script.js"></script>
 </body>

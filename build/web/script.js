@@ -594,38 +594,27 @@ function closeConfigModal(e) {
  */
 function showPosInfo() {
     const isEnabled = document.getElementById('cb_filter_pos_enable').checked;
+    const title = '🏷️ 词性过滤说明';
+    let content = '';
 
     if (!isEnabled) {
-        showNotification(
-            '提示',
-            '当前 <strong>未启用</strong> 词性过滤，系统将保留并统计所有接收到的词汇。',
-            'warning'
-        );
+        content = '<p>当前 <strong>未启用</strong> 词性过滤。</p><p>系统将保留并统计所有接收到的词汇，无论其词性如何。</p>';
     } else {
-        showNotification(
-            '词性配置说明',
-            '蓝色高亮</strong> 的标签代表 <strong>保留</strong> 该词性，灰色标签代表过滤掉该词性。',
-            'success'
-        );
+        content = '<p>当前 <strong>已启用</strong> 词性过滤。</p><p>只有 <span class="highlight-blue">蓝色高亮</span> 的标签所代表的词性才会被保留和统计，其他词性将被忽略。</p>';
     }
+    showInfoModal(title, content);
 }
-
 function showSensitiveInfo() {
     const isEnabled = document.getElementById('cb_filter_sensitive_enable').checked;
-
+    const title = '🛡️ 敏感词过滤说明';
+    let content = '';
+    
     if (!isEnabled) {
-        showNotification(
-            '提示',
-            '当前 <strong>未启用</strong> 敏感词过滤，所有敏感词都将正常显示在榜单中。',
-            'warning'
-        );
+        content = '<p>当前 <strong>未启用</strong> 敏感词过滤。</p><p>所有词汇（包括已添加的敏感词）都将正常显示在榜单中。</p>';
     } else {
-        showNotification(
-            '敏感词配置说明',
-            '列表中的词汇将被系统自动屏蔽，不会出现在热词统计中。',
-            'success'
-        );
+        content = '<p>当前 <strong>已启用</strong> 敏感词过滤。</p><p>您在下方列表中添加的所有词汇，都将被系统自动屏蔽，不会出现在热词统计中。</p>';
     }
+    showInfoModal(title, content);
 }
 
 
@@ -691,4 +680,26 @@ function executeReset() {
         log("❌ " + e);
         showNotification('重置失败', '连接服务器时发生错误', 'danger');
     });
+}
+
+
+
+/**
+ * 打开通用信息弹窗
+ * @param {string} title - 弹窗的标题
+ * @param {string} htmlContent - 弹窗的HTML内容
+ */
+function showInfoModal(title, htmlContent) {
+    document.getElementById('infoModalTitle').innerText = title;
+    document.getElementById('infoModalContent').innerHTML = htmlContent;
+    document.getElementById('infoModal').classList.add('show');
+}
+/**
+ * 关闭通用信息弹窗
+ */
+function closeInfoModal(e) {
+    const modal = document.getElementById('infoModal');
+    if (!e || e.target === modal) {
+        modal.classList.remove('show');
+    }
 }
