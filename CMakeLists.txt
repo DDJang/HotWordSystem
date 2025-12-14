@@ -19,13 +19,8 @@ include_directories(
 # 主程序源文件
 set(MAIN_SOURCES "src/main.cpp")
 
-# --- 修改点 1: 更新测试代码的路径 ---
 # 测试程序源文件 (指向新的 test/unittest 目录)
 set(TEST_SOURCES "test/unittest/test_main.cpp")
-
-# 注意：如果你有在 src 下除了 main.cpp 以外的 .cpp 实现文件 (例如 src/algo.cpp)，
-# 你需要把它们也加到这里，或者定义一个 COMMON_SOURCES 变量供两个目标共用。
-# set(COMMON_SOURCES "src/algo.cpp" "src/utils.cpp")
 
 # 3. 生成主程序
 add_executable(HotWordSystem ${MAIN_SOURCES})
@@ -59,7 +54,7 @@ message(STATUS "已配置 Web 资源复制路径")
 
 # 7. 复制 testdata 到构建目录 ---
 # 这样在代码中读取文件时，可以使用相对路径 "./testdata/xxx.txt"
-# 如果 testdata 文件夹不存在，CMake 可能会报警告，这里加个判断（可选）
+# 如果 testdata 文件夹不存在，CMake 可能会报警告，这里加个判断
 if(EXISTS "${CMAKE_SOURCE_DIR}/test/testdata")
     file(COPY ${CMAKE_SOURCE_DIR}/test/testdata DESTINATION ${CMAKE_BINARY_DIR})
     message(STATUS "已复制 testdata 到构建目录")

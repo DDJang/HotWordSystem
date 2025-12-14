@@ -41,14 +41,14 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "HotWordSystem::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-HotWordSystem-Debug-5396539b436203c1fdd5.json",
+					"jsonFile" : "target-HotWordSystem-Debug-de88580582725532b459.json",
 					"name" : "HotWordSystem",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "RunTests::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-RunTests-Debug-002110aa878264a7c79c.json",
+					"jsonFile" : "target-RunTests-Debug-a65b9cd5c4cf17c7d39b.json",
 					"name" : "RunTests",
 					"projectIndex" : 0
 				}
