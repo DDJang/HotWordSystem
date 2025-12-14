@@ -27,7 +27,7 @@ body {
 .right-col {
     flex: 1;
     background: transparent; /* 去掉大背景 */
-    padding: 0 10px;         /* 稍微留点左右边距 */
+    padding: 10px 10px 0;        /* 稍微留点左右边距 */
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -889,4 +889,38 @@ input:checked+.slider:before {
     color: #1f2937;        /* 颜色加深，更突出 */
     padding-bottom: 8px;  /* 增加底部间距，让下划线更协调 */
     letter-spacing: 0.5px; /* 可选：增加一点字间距，提升质感 */
+}
+
+
+
+/* 标题栏上的终止程序图标按钮 (优化版) */
+.shutdown-btn-header {
+    width: 36px;  /* -> 尺寸增大 */
+    height: 36px; /* -> 尺寸增大 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    
+    /* 默认状态：增加红色边框，更醒目 */
+    background-color: #fef2f2; 
+    color: #ef4444; 
+    border: 1px solid #fca5a5; /* -> 新增边框 */
+}
+
+/* 鼠标悬浮状态：使用更深、更强烈的红色 */
+.shutdown-btn-header:hover {
+    background-color: #b91c1c; /* -> 颜色加深 */
+    color: #ffffff;
+    transform: scale(1.1) rotate(90deg);
+    box-shadow: 0 4px 12px rgba(185, 28, 28, 0.5); /* -> 阴影加深 */
+    border-color: #b91c1c; /* -> 边框颜色同步加深 */
+}
+
+/* 按钮内的 SVG 图标大小 -> 同步增大 */
+.shutdown-btn-header svg {
+    width: 20px; /* -> 图标增大 */
+    height: 20px;/* -> 图标增大 */
 }
