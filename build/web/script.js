@@ -519,34 +519,8 @@ function runBench() {
 }
 
 function resetSystem() {
-    if (!confirm("⚠️ 警告：这将清空所有内存数据和历史日志文件，并会中断压力测试！")) return;
-    document.getElementById('history-mode-overlay').classList.remove('show');
-    log("Sending Reset...", "00:00:00");
-
-    fetch('/api/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cmd: `[ACTION] RESET` })
-    })
-        .then(r => r.json())
-        .then(d => {
-            isHistoryMode = false;
-            myChart.setOption({
-                xAxis: { data: [] },
-                series: [{ data: [], itemStyle: { color: '#3b82f6' } }],
-                grid: { top: '10%' }
-            });
-            document.getElementById('trendBody').innerHTML = "";
-            document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
-            document.getElementById('btnBackRealtime').classList.remove('btn-pulse');
-            document.getElementById('history-mode-overlay').classList.remove('show');
-            log("✅ System & Log Cleared.", "00:00:00");
-            showNotification('系统重置', '内存数据及日志文件已全部清空', 'danger', 6000);
-        })
-        .catch(e => {
-            log("❌ " + e);
-            showNotification('重置失败', '连接服务器时发生错误', 'danger');
-        });
+    const modal = document.getElementById('resetModal');
+    modal.classList.add('show');
 }
 
 function shutdownSystem() {
@@ -672,4 +646,49 @@ function executeShutdown() {
     setTimeout(() => {
         document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
     }, 1000);
+}
+
+
+
+/**
+ * 关闭清空数据确认弹窗
+ */
+function closeResetModal(e) {
+    const modal = document.getElementById('resetModal');
+    if (!e || e.target === modal) {
+        modal.classList.remove('show');
+    }
+}
+function executeReset() {
+    // 1. 关闭弹窗
+    closeResetModal(null);
+    
+    // 2. 执行旧的清空逻辑
+    document.getElementById('history-mode-overlay').classList.remove('show');
+    log("Sending Reset...", "00:00:00");
+
+    fetch('/api/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cmd: `[ACTION] RESET` })
+    })
+    .then(r => r.json())
+    .then(d => {
+        isHistoryMode = false;
+        myChart.setOption({
+            xAxis: { data: [] },
+            series: [{ data: [], itemStyle: { color: '#3b82f6' } }],
+            grid: { top: '10%' }
+        });
+        document.getElementById('trendBody').innerHTML = "";
+        document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
+        document.getElementById('btnBackRealtime').classList.remove('btn-pulse');
+        document.getElementById('history-mode-overlay').classList.remove('show');
+        log("✅ System & Log Cleared.", "00:00:00");
+        showNotification('系统重置', '内存数据及日志文件已全部清空', 'danger', 6000);
+    })
+    .catch(e => {
+        log("❌ " + e);
+        showNotification('重置失败', '连接服务器时发生错误', 'danger');
+    });
 }

@@ -373,6 +373,27 @@
         </div>
     </div>
 
+    <!-- 【新增】清空数据确认弹窗 -->
+    <div id="resetModal" class="modal-overlay" onclick="closeResetModal(event)">
+        <div class="modal-content" style="width: 420px;">
+            <h2>⚠️ 操作确认 ⚠️</h2>
+
+            <div class="warning-text-block">
+                <p>这将清空所有内存数据和历史日志文件！</p>
+                <p>此操作不可逆，所有未导出的统计都将丢失。</p>
+            </div>
+
+            <p style="text-align: center; font-weight: bold; font-size: 16px; margin-top: 15px; color: #b91c1c;">
+                确定要清空吗？
+            </p>
+
+            <div class="modal-actions">
+                <button onclick="closeResetModal(null)">取消</button>
+                <button onclick="executeReset()" class="danger">确认清空</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 引入逻辑文件 -->
     <script src="script.js"></script>
 </body>
