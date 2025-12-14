@@ -6,13 +6,28 @@
 
 body {
     font-family: 'Segoe UI', sans-serif;
-    background: var(--bg);
+    
+    /* 
+       【核心修改】高级极光渐变背景
+       1. 先设置一个基础背景色，作为底色。
+       2. 在底色之上，叠加多个大型、半透明的径向渐变，模拟多彩光晕。
+    */
+    background-color: #f0f2f7; /* 一个更冷、更现代的浅灰色作为基底 */
+    background-image: 
+        /* 左上角的蓝色光晕 */
+        radial-gradient(circle at 15% 20%, rgba(59, 130, 246, 0.15), transparent 40%),
+        /* 右下角的紫色光晕 */
+        radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.15), transparent 40%),
+        /* 中间的微弱白色高光，增加层次感 */
+        radial-gradient(circle at 50% 50%, rgba(236, 248, 255, 0.2), transparent 40%);
+
+    /* --- 以下为原有的布局样式，保持不变 --- */
     display: flex;
     gap: 20px;
     padding: 20px;
-    height: 100vh; /* 强制占满全屏高度 */
+    height: 100vh;
     box-sizing: border-box;
-    overflow: hidden; /* 禁止整个网页出现滚动条，只允许内部滚动 */
+    overflow: hidden;
 }
 
 .left-col {
@@ -37,12 +52,6 @@ body {
     box-shadow: none;        /* 去掉大阴影 */
 }
 
-.card {
-    background: var(--card);
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-}
 
 .chart-box {
     flex: 1;
@@ -66,16 +75,29 @@ h3 {
     font-weight: 700;
 }
 
+
+.card,
 .control-group {
-    background: #ffffff; 
-    padding: 18px 20px; 
-    border: 1px solid #e5e7eb;
+    /* 1. 半透明的“玻璃”背景 */
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.4));
+    
+    /* 2. 背景模糊效果 */
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    
+    /* 3. 增加一个微妙的边框来“勾勒”玻璃边缘 */
+    border: 1px solid rgba(255, 255, 255, 0.5);
+
+    /* 4. 调整阴影以适应“悬浮”感 */
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+
+    /* --- 以下为原有的基础样式，保持不变 --- */
     border-radius: 12px;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-    /* 确保宽度计算正确 */
-    box-sizing: border-box; 
+    padding: 20px;
+    box-sizing: border-box;
     width: 100%;
 }
+
 
 input,
 button,
@@ -981,4 +1003,106 @@ input:checked+.slider:before {
     mask-image: linear-gradient(to bottom, black, transparent);
     
     pointer-events: none;
+}
+
+
+
+/* == 关机弹窗专属样式 (最终版) == */
+/* 1. 弹窗内警告文本块的样式 */
+.warning-text-block {
+    margin: 15px 0;
+    padding: 15px;
+    background: rgba(254, 242, 242, 0.8);
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    text-align: center;
+    line-height: 1.6;
+    color: #991b1b;
+    font-size: 14px;
+}
+
+.warning-text-block p {
+    margin: 0;
+}
+
+/* 2. 让“确认关闭”按钮变成红色的“胶囊按钮”，与性能弹窗风格统一 */
+.modal-actions button.danger {
+    background: #dc2626;
+    color: white;
+    border-color: transparent;
+    border-radius: 50px; /* 胶囊形状 */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    transition: all 0.2s;
+}
+
+.modal-actions button.danger:hover {
+    background: #b91c1c;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(220, 38, 38, 0.3);
+}
+
+
+/* ========================================= */
+/* == 1. 美化右侧滚动条 (玻璃风格) == */
+/* ========================================= */
+/* 针对 Webkit 内核浏览器 (Chrome, Edge, Safari) */
+.right-col::-webkit-scrollbar {
+    width: 6px; /* -> 变细 */
+}
+
+.right-col::-webkit-scrollbar-track {
+    background: transparent; /* -> 轨道完全透明 */
+}
+
+.right-col::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.5); /* -> 滑块半透明 */
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* 针对 Firefox */
+.right-col {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.5) transparent;
+}
+
+
+
+/* ======================================== */
+/* == 2. 美化输入框和文本域 (玻璃风格) == */
+/* ======================================== */
+
+/* 统一修改所有输入框的基础样式 */
+input[type="text"],
+input[type="number"],
+textarea {
+    background: rgba(255, 255, 255, 0.35); /* -> 半透明背景 */
+    border: 1px solid rgba(255, 255, 255, 0.5); /* -> 半透明边框 */
+    color: #1f2937; /* -> 深色文字保证可读性 */
+    transition: all 0.2s ease; /* -> 为点击交互增加动画 */
+    
+    /* 增加内阴影，营造“凹陷”感 */
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* 修改占位符文字颜色，使其更柔和 */
+input::placeholder,
+textarea::placeholder {
+    color: rgba(55, 65, 81, 0.6);
+}
+
+/* 当用户点击输入框时的“聚焦”样式 */
+input[type="text"]:focus,
+input[type="number"]:focus,
+textarea:focus {
+    background: rgba(255, 255, 255, 0.5); /* -> 聚焦时背景更亮 */
+    
+    /* 用主题蓝色高亮边框 */
+    border-color: rgba(59, 130, 246, 0.7);
+    
+    /* 添加外发光效果 */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    
+    /* 移除浏览器默认的、丑陋的蓝色外框 */
+    outline: none;
 }

@@ -350,6 +350,29 @@
         </div>
     </div>
 
+    <!-- == 新增：关机确认弹窗 (液态玻璃风格) == -->
+    <div id="shutdownModal" class="modal-overlay" onclick="closeShutdownModal(event)">
+        <div class="modal-content" style="width: 420px;">
+            <h2>⚠️ 严重警告 ⚠️</h2>
+
+            <!-- 警告文本区域 -->
+            <div class="warning-text-block">
+                <p>这将完全关闭服务器程序！</p>
+                <p>所有连接将断开，您必须手动去服务器重启程序。</p>
+            </div>
+
+            <p style="text-align: center; font-weight: bold; font-size: 16px; margin-top: 15px; color: #b91c1c;">
+                确定要继续吗？
+            </p>
+
+            <!-- 底部操作按钮 -->
+            <div class="modal-actions">
+                <button onclick="closeShutdownModal(null)">取消</button>
+                <button onclick="executeShutdown()" class="danger">确认关闭</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 引入逻辑文件 -->
     <script src="script.js"></script>
 </body>

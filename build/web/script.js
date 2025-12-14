@@ -550,14 +550,8 @@ function resetSystem() {
 }
 
 function shutdownSystem() {
-    if (!confirm("⚠️ 严重警告 ⚠️\n\n这将完全关闭服务器程序！\n所有连接将断开，您必须手动去服务器重启程序。\n\n确定要关闭吗？")) {
-        return;
-    }
-    apiPost('/api/command', { cmd: `[ACTION] SHUTDOWN` });
-    showNotification('系统关闭', '正在断开连接并停止服务...', 'danger', 10000);
-    setTimeout(() => {
-        document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
-    }, 1000);
+    const modal = document.getElementById('shutdownModal');
+    modal.classList.add('show');
 }
 
 // 文件上传处理函数
@@ -658,4 +652,24 @@ function showSensitiveInfo() {
             'success'
         );
     }
+}
+
+
+function closeShutdownModal(e) {
+    const modal = document.getElementById('shutdownModal');
+    if (!e || e.target === modal) {
+        modal.classList.remove('show');
+    }
+}
+
+function executeShutdown() {
+    // 1. 立即关闭弹窗
+    closeShutdownModal(null);
+
+    // 2. 执行旧的关机指令逻辑
+    apiPost('/api/command', { cmd: `[ACTION] SHUTDOWN` });
+    showNotification('系统关闭', '正在断开连接并停止服务...', 'danger', 10000);
+    setTimeout(() => {
+        document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
+    }, 1000);
 }
