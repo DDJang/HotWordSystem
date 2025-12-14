@@ -26,16 +26,15 @@ body {
 
 .right-col {
     flex: 1;
-    background: var(--card);
-    border-radius: 12px;
-    padding: 20px;
-    overflow-y: auto; /* 右侧内容过多时内部滚动 */
+    background: transparent; /* 去掉大背景 */
+    padding: 0 10px;         /* 稍微留点左右边距 */
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    height: 100%; /* 确保右侧栏填满高度 */
-    box-sizing: border-box; /* 包含 padding */
+    gap: 20px;               /* 板块间隔 */
+    height: 100%;
+    box-sizing: border-box;
+    box-shadow: none;        /* 去掉大阴影 */
 }
 
 .card {
@@ -68,10 +67,14 @@ h3 {
 }
 
 .control-group {
-    border: 1px solid #f3f4f6;
-    padding: 10px;
-    border-radius: 8px;
-    background: #fafafa;
+    background: #ffffff; 
+    padding: 18px 20px; 
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    /* 确保宽度计算正确 */
+    box-sizing: border-box; 
+    width: 100%;
 }
 
 input,
