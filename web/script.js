@@ -287,13 +287,18 @@ function renderTrends(list) {
 
 function apiPost(url, data) {
     log("Sending...");
-    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+    // 【修改点1】在 fetch 前面加上 return，把承诺返回出去
+    return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
         .then(r => r.json())
         .then(d => {
             const serverTime = d.timestamp || null;
             log("✅ " + (d.message || "OK"), serverTime);
+            return d; // 【修改点2】把服务器的数据传给下一步
         })
-        .catch(e => log("❌ " + e));
+        .catch(e => {
+            log("❌ " + e);
+            throw e; // 【修改点3】如果出错，抛出错误让调用者知道
+        });
 }
 function log(msg, customTime = null) {
     const el = document.getElementById('log');
@@ -459,11 +464,26 @@ function genReport() {
     }
 }
 
+
 function runBench() {
     const n = validateNumber('benchN', 1, 100000, "Benchmark N");
     if (n !== null) {
-        apiPost('/api/command', { cmd: `[ACTION] BENCHMARK N=${n}` });
-        showNotification('压力测试', `已启动压测，目标写入 ${n} 条数据`, 'warning');
+        // 先给一个提示，告诉用户开始了
+        showNotification('压力测试', `正在请求写入 ${n} 条数据...`, 'warning');
+
+        // 发送请求，并等待结果
+        apiPost('/api/command', { cmd: `[ACTION] BENCHMARK N=${n}` })
+            .then(() => {
+                // 【关键】这里是服务器处理完返回后执行的代码
+                // 延迟 500ms 弹窗，让人感觉有个处理过程，体验更好
+                setTimeout(() => {
+                    showNotification('压力测试完成', `成功！已向系统注入 ${n} 条模拟数据。`, 'success', 5000);
+                }, 500);
+            })
+            .catch(() => {
+                // 如果出错了
+                showNotification('❌ 错误', '压力测试启动失败，请检查连接。', 'danger');
+            });
     }
 }
 
