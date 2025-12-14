@@ -407,6 +407,21 @@
         </div>
     </div>
 
+    <!-- 删除敏感词确认弹窗 -->
+    <div id="removeSensitiveModal" class="modal-overlay" onclick="closeRemoveSensitiveModal(event)">
+        <div class="modal-content" style="width: 400px;">
+            <h2>🗑️ 确认移除</h2>
+
+            <!-- 内容将由JS动态填充 -->
+            <p id="removeSensitiveText" class="confirm-text"></p>
+
+            <div class="modal-actions">
+                <button onclick="closeRemoveSensitiveModal(null)">取消</button>
+                <button onclick="executeRemoveSensitive()" class="danger">确认移除</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 引入逻辑文件 -->
     <script src="script.js"></script>
 </body>

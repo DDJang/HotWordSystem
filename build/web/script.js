@@ -1,5 +1,6 @@
 var feedbackTimer = null;
 var isHistoryMode = false;
+var wordToRemove = null; // 用于存储待删除的敏感词
 var historyWindowText = "";
 
 var myChart = echarts.init(document.getElementById('mainChart'));
@@ -400,11 +401,16 @@ function addSensitive() {
     }
 }
 function removeSensitive(w) {
-    if (confirm("Remove " + w + "?")) {
-        apiPost('/api/config', { remove_sensitive: w });
-        setTimeout(loadConfigState, 500);
-        showNotification('屏蔽词已移除', `"${w}" 已从屏蔽列表中删除。`, 'success');
-    }
+    // 1. 将待删除的词存到全局变量
+    wordToRemove = w;
+
+    // 2. 填充弹窗的动态内容
+    const textElement = document.getElementById('removeSensitiveText');
+    textElement.innerHTML = `您确定要从屏蔽列表中移除 “<span class="highlight-word">${w}</span>” 吗？`;
+    
+    // 3. 显示弹窗
+    const modal = document.getElementById('removeSensitiveModal');
+    modal.classList.add('show');
 }
 
 function viewHistory() {
@@ -702,4 +708,31 @@ function closeInfoModal(e) {
     if (!e || e.target === modal) {
         modal.classList.remove('show');
     }
+}
+
+
+
+/**
+ * 【新增】关闭删除敏感词确认弹窗
+ */
+function closeRemoveSensitiveModal(e) {
+    const modal = document.getElementById('removeSensitiveModal');
+    if (!e || e.target === modal) {
+        modal.classList.remove('show');
+    }
+}
+function executeRemoveSensitive() {
+    // 确保我们有一个有效的待删除词
+    if (wordToRemove) {
+        // 1. 执行旧的删除逻辑
+        apiPost('/api/config', { remove_sensitive: wordToRemove });
+        setTimeout(loadConfigState, 500);
+        showNotification('屏蔽词已移除', `“${wordToRemove}” 已从屏蔽列表中删除。`, 'success');
+
+        // 2. 清理工作
+        wordToRemove = null; // 清空全局变量
+    }
+    
+    // 3. 关闭弹窗
+    closeRemoveSensitiveModal(null);
 }

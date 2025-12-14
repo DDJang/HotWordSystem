@@ -1125,3 +1125,24 @@ textarea:focus {
     color: #2563eb;
     font-weight: bold;
 }
+
+
+
+/* 删除确认弹窗的文本样式 */
+.confirm-text {
+    text-align: center;
+    font-size: 16px;
+    line-height: 1.7;
+    margin: 20px 0;
+    color: #4b5563;
+}
+/* 让动态插入的词汇更突出 */
+.confirm-text .highlight-word {
+    font-family: 'Consolas', monospace;
+    font-weight: bold;
+    color: #b91c1c; /* 深红色 */
+    background-color: rgba(254, 242, 242, 0.9); /* 淡红色背景 */
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
