@@ -438,3 +438,27 @@ function shutdownSystem() {
         document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
     }, 1000);
 }
+
+// 【新增】文件上传处理函数
+function uploadFile(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        return;
+    }
+
+    log(`Reading file: ${file.name}...`);
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const content = e.target.result;
+        log(`File read successfully, sending ${Math.round(content.length / 1024)} KB to server...`);
+        apiPost('/api/command', { cmd: content });
+    };
+    reader.onerror = function(e) {
+        log(`❌ Error reading file: ${e.type}`);
+    };
+    reader.readAsText(file);
+
+    // 清空 input 的值，这样用户可以重复上传同一个文件
+    event.target.value = '';
+}

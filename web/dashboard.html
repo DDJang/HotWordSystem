@@ -87,6 +87,15 @@
                 <textarea id="manualInput" rows="1" placeholder="输入内容..."></textarea>
                 <button onclick="sendManualData()" style="width: 60px;">发送</button>
             </div>
+
+            <!-- 【新增】文件上传部分 -->
+            <div class="row" style="margin-top: 8px;">
+                <input type="file" id="fileUploader" style="display: none;" onchange="uploadFile(event)">
+                <button onclick="document.getElementById('fileUploader').click()" class="secondary"
+                    style="width: 100%;">
+                    📤 上传文件
+                </button>
+            </div>
         </div>
 
         <!-- 过滤配置 (UI 优化版) -->
@@ -215,7 +224,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- 引入逻辑文件 -->
     <script src="script.js"></script>
 </body>
