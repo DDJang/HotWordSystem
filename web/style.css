@@ -187,9 +187,13 @@ th {
 }
 
 #windowInfo {
-    font-size: 14px;
-    color: #666;
-    font-family: monospace;
+    font-size: 18px;       /* 增大字号 (原14px -> 18px) */
+    font-weight: 800;      /* 特粗字体 */
+    color: #1f2937;        /* 颜色加深，让文字更清晰 (接近纯黑的深灰) */
+    font-family: 'Consolas', 'Monaco', monospace; /* 保持等宽字体，防止数字变化时文字抖动 */
+    
+    /* 可选：添加一点微弱的文字投影，增加层次感 */
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 1);
 }
 
 #log {
