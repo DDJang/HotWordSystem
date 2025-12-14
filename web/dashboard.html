@@ -128,9 +128,9 @@
         <!-- 数据模拟 -->
         <div class="control-group">
             <h3>📝 数据模拟</h3>
-            <div class="row">
+            <div class="row input-group-interactive">
                 <textarea id="manualInput" rows="1" placeholder="输入内容..."></textarea>
-                <button onclick="sendManualData()" style="width: 60px;">发送</button>
+                <button onclick="sendManualData()">发送</button>
             </div>
 
             <!-- 【新增】文件上传部分 -->
@@ -259,7 +259,7 @@
             </div>
 
             <div class="row" style="margin-top: 8px;">
-                <button onclick="viewHistory()" style="background: #8b5cf6;">回放图表</button>
+                <button onclick="viewHistory()" class="purple">回放图表</button>
                 <button id="btnBackRealtime" onclick="backToRealtime()">返回实时</button>
             </div>
         </div>
