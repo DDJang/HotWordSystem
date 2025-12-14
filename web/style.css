@@ -469,3 +469,72 @@ input:checked+.slider:before {
     opacity: 1;
     transform: translateY(0);
 }
+
+/* --- 通知系统 --- */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 380px;
+}
+
+.notification-toast {
+    background: white;
+    color: #333;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    border-left: 5px solid;
+    animation: slideIn 0.3s ease-out;
+    position: relative;
+    opacity: 0.95;
+}
+
+.notification-toast .close-btn {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+/* 警告类型 (黄色) */
+.notification-toast.is-warning {
+    border-color: #f59e0b; /* amber-500 */
+}
+.notification-toast.is-warning h4 { color: #b45309; }
+
+/* 危险类型 (红色) */
+.notification-toast.is-danger {
+    border-color: #ef4444; /* red-500 */
+}
+.notification-toast.is-danger h4 { color: #b91c1c; }
+
+.notification-toast h4 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+}
+
+.notification-toast p {
+    margin: 0;
+    font-size: 13px;
+    color: #4b5563;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 0.95;
+    }
+}

@@ -12,6 +12,9 @@
 
 <body>
 
+    <!-- 【新增】通知容器 -->
+    <div id="notification-container" class="notification-container"></div>
+
     <div class="left-col">
         <div class="card chart-box">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -62,12 +65,12 @@
             <h3>⏳ 视图设置</h3>
             <div class="dual-input">
                 <label>Window:</label>
-                <input type="number" id="winSize" value="600" min="1" max="86400" placeholder="1-86400">
+                <input type="number" id="winSize" value="600" min="1" max="2592000" placeholder="1-2592000">
                 <button onclick="updateWindowSize()" style="width: 60px;">应用</button>
             </div>
             <div class="dual-input">
                 <label>Storage:</label>
-                <input type="number" id="retSize" value="3600" min="600" max="604800" placeholder="> Window">
+                <input type="number" id="retSize" value="6000" min="600" max="2592000" placeholder="> Window">
                 <button onclick="updateRetention()" style="width: 60px;">应用</button>
             </div>
             <div class="dual-input">

@@ -15,6 +15,7 @@
 #include "SystemContext.h"
 #include "CommandExecutor.h"
 #include "GlobalUtils.h"
+#include "SlidingWindow.h" // 【新增】包含 SlidingWindow 的完整定义
 
 #ifdef _WIN32
 #include <direct.h>
@@ -127,6 +128,14 @@ private:
             j["window_end"] = GlobalUtils::formatTime(range.second);
             j["current_ts"] = GlobalUtils::formatTime(currentTs);
             j["retention_sec"] = retentionSec;
+
+            // 【新增】读取并重置事件标志，并将其添加到 JSON 响应中
+            // exchange 是原子操作，它会返回当前值，并立即用新值替换
+            bool capacityEvicted = ctx.capacityLimitEvictionOccurred.exchange(false);
+            bool timeEvicted = ctx.timeLimitEvictionOccurred.exchange(false);
+
+            j["capacity_limit_evicted"] = capacityEvicted;
+            j["time_limit_evicted"] = timeEvicted;
 
             res.set_header("Access-Control-Allow-Origin", "*");
             res.set_content(j.dump(), "application/json");

@@ -3,9 +3,11 @@
 #include <fstream>
 #include <atomic>
 #include "TextProcessor.h"
-#include "SlidingWindow.h"
 #include "PersistenceManager.h"
 #include "PerformanceMonitor.h"
+
+// 【修改】对于 SlidingWindow，只使用前向声明来打破循环依赖
+class SlidingWindow;
 
 class SystemContext {
 public:
@@ -24,26 +26,16 @@ public:
     // 退出标志位
     std::atomic<bool> shouldExit{false}; 
 
+    // 【新增】驱逐事件标志位
+    // 当因达到容量上限而强制驱逐时，此标志为 true
+    std::atomic<bool> capacityLimitEvictionOccurred{false};
+    // 当因达到时间上限而常规驱逐时，此标志为 true
+    std::atomic<bool> timeLimitEvictionOccurred{false};
+
     // 一个全局互斥锁，用于保护对 ctx 成员的复杂访问
     std::mutex global_mutex; 
 
-    SystemContext() {
-        // 路径配置
-        const char* DICT_PATH = "dict/jieba.dict.utf8";
-        const char* HMM_PATH = "dict/hmm_model.utf8";
-        const char* USER_DICT_PATH = "dict/user.dict.utf8";
-        const char* IDF_PATH = "dict/idf.utf8";
-        const char* STOP_WORD_PATH = "dict/stop_words.utf8";
-        const char* SENSITIVE_PATH = "dict/sensitive_words.txt";
-
-        // 确保敏感词文件存在
-        std::ofstream tmp(SENSITIVE_PATH, std::ios::app);
-        tmp.close();
-
-        // 初始化组件
-        processor = std::make_unique<TextProcessor>(DICT_PATH, HMM_PATH, USER_DICT_PATH, IDF_PATH, STOP_WORD_PATH, SENSITIVE_PATH);
-        window = std::make_unique<SlidingWindow>(600);
-        persistence = std::make_unique<PersistenceManager>("data/history.log");
-        monitor = std::make_unique<PerformanceMonitor>();
-    }
+    // 【修改】构造函数和析构函数只保留声明
+    SystemContext();
+    ~SystemContext(); // 对于 unique_ptr 指向不完整类型，析构函数必须在实现文件中定义
 };

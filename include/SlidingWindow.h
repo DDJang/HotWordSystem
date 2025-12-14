@@ -12,14 +12,16 @@
 #include <mutex>
 #include <utility>
 
+#include "SystemContext.h" // <-- 包含头文件
+
 class SlidingWindow {
 private:
     long long windowSizeSeconds;
     long long currentTimeCursor = 0;
     
-    // 最大保留时间（物理存储时间），例如 3600秒 (1小时)
-    // 即使窗口只有 10秒，我们也保留 1小时数据，以便用户随时把窗口拉大
-    long long maxRetentionSeconds = 3600; 
+    // 最大保留时间（物理存储时间），例如 6000秒 (100分钟)
+    // 即使窗口只有 10秒，我们也保留 100分钟数据，以便用户随时把窗口拉大
+    long long maxRetentionSeconds = 6000; 
 
     // 1. 物理存储 (Storage)：保留所有原始数据，用于“回滚”和“重算”
     std::map<long long, std::vector<std::string>> storage;
@@ -31,6 +33,9 @@ private:
     // 实时词频统计 (对应 activeData)
     std::unordered_map<std::string, int> wordCounts;
 
+    // 【新增】持有 SystemContext 引用
+    SystemContext& ctx;
+
     mutable std::mutex mtx;
 
     // 最大允许存储的条目数 (防止内存爆炸)
@@ -39,7 +44,9 @@ private:
 
 
 public:
-    SlidingWindow(long long windowSize = 600) : windowSizeSeconds(windowSize) {}
+    // 【修改】构造函数，接收 SystemContext 引用
+    SlidingWindow(long long windowSize, SystemContext& context) 
+        : windowSizeSeconds(windowSize), ctx(context) {}
 
     // --- 数据接入 ---
     void addData(long long timestamp, const std::vector<std::string>& words) {
@@ -240,6 +247,9 @@ private:
             // 简单处理：仅从物理存储删除，防止 storage 无限膨胀
             // 如果用户此时把窗口拉大到覆盖这些被删除的数据，会发现数据缺失（这是预期的牺牲）
             storage.erase(storage.begin());
+
+            // 【新增】设置容量超限标志
+            ctx.capacityLimitEvictionOccurred = true; 
         }
         
         // 同时也检查一下 activeData (逻辑队列)，防止极端情况下队列过长
@@ -297,12 +307,20 @@ private:
         
         // map 是有序的，直接检查头部
         auto it = storage.begin();
+        // 【新增】一个flag，只要发生了一次删除，就设置
+        bool evicted = false; 
         while (it != storage.end()) {
             if (it->first <= physicalThreshold) {
                 it = storage.erase(it); // 返回下一个迭代器
+                evicted = true; // 标记发生了驱逐
             } else {
                 break; // 只要遇到一个没过期的，后面的肯定也没过期
             }
+        }
+
+        // 【新增】如果发生了驱逐，设置时间超限标志
+        if (evicted) {
+            ctx.timeLimitEvictionOccurred = true;
         }
     }
 };

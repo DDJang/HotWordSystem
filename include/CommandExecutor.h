@@ -8,6 +8,7 @@
 #include <chrono>
 #include "SystemContext.h"
 #include "GlobalUtils.h"
+#include "SlidingWindow.h" // 【新增】包含 SlidingWindow 的完整定义
 
 class CommandExecutor {
 private:
@@ -72,7 +73,7 @@ public:
             }
             // 2. 指令: 设置窗口
             else if (std::regex_search(line, match, windowRegex)) {
-                long long s = GlobalUtils::safeStoll(match[1].str(), 1, 86400, 600);
+                long long s = GlobalUtils::safeStoll(match[1].str(), 1, 2592000, 600);
                 ctx.window->setWindowSize(s);
                 finalOutput << "[Cmd] Window set to " << s << "s\n";
             }

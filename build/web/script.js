@@ -19,6 +19,35 @@ window.addEventListener('resize', function () {
 var currentBackendTimestamp = "00:00:00";
 var isInitialLoad = true;
 
+
+/**
+ * 显示一个通知
+ * @param {string} title - 通知的标题
+ * @param {string} message - 通知的内容
+ * @param {string} type - 'warning' (黄) 或 'danger' (红)
+ * @param {number} duration - 自动关闭的毫秒数，0 表示不自动关闭
+ */
+function showNotification(title, message, type = 'warning', duration = 8000) {
+    const container = document.getElementById('notification-container');
+
+    const toast = document.createElement('div');
+    toast.className = `notification-toast is-${type}`;
+
+    toast.innerHTML = `
+        <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+        <h4>${title}</h4>
+        <p>${message}</p>
+    `;
+
+    container.appendChild(toast);
+
+    if (duration > 0) {
+        setTimeout(() => {
+            toast.remove();
+        }, duration);
+    }
+}
+
 function fetchAndUpdateRealtimeChart() {
     let k = document.getElementById('displayK').value || 10;
     fetch('/api/data?k=' + k)
@@ -28,6 +57,24 @@ function fetchAndUpdateRealtimeChart() {
                 clearInterval(mainInterval);
                 document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
                 return;
+            }
+
+
+            // 【新增】检查驱逐标志并显示通知
+            // 危险警告优先
+            if (data.capacity_limit_evicted) {
+                showNotification(
+                    '内存警告',
+                    '系统内存占用已达上限！为保证稳定性，部分最老的数据已被强制清除，这些数据将无法回溯。',
+                    'danger',
+                    10000 // 危险警告显示更久
+                );
+            } else if (data.time_limit_evicted) {
+                showNotification(
+                    '数据清理提示',
+                    '部分历史数据因超出设置的最大保留时间(“Storage”)，已被常规清除，这部分数据将无法回溯。',
+                    'warning'
+                );
             }
 
             if (!isHistoryMode) {
@@ -216,15 +263,37 @@ function log(msg, customTime = null) {
 }
 
 function updateWindowSize() {
-    const s = validateNumber('winSize', 1, 86400, "Window Size");
+    const s = validateNumber('winSize', 1, 2592000, "Window Size");
     if (s !== null) apiPost('/api/command', { cmd: `[ACTION] SET_WINDOW S=${s}` });
 }
 
 function updateRetention() {
+    // 1. 获取 Window 输入框的当前值
     const winSize = parseInt(document.getElementById('winSize').value) || 0;
-    const r = validateNumber('retSize', winSize, 2592000, "Retention");
-    if (r !== null) apiPost('/api/command', { cmd: `[ACTION] SET_RETENTION R=${r}` });
+
+    // 2. 获取 Storage 输入框本身，以读取其 min 和 max 属性
+    const retSizeInput = document.getElementById('retSize');
+    const retMinHardcoded = parseInt(retSizeInput.min); // Storage 的硬编码最小值 (e.g., 600)
+    const retMaxHardcoded = parseInt(retSizeInput.max); // Storage 的硬编码最大值 (e.g., 2592000)
+
+    // 3. 【核心修复】预检查：Window 的值是否已经超过了系统允许的最大值？
+    if (winSize > retMaxHardcoded) {
+        alert(`❌ 操作无效：窗口大小过大\n\n您在 "Window" 中输入的值 (${winSize}s) 已超过系统最大限制 (${retMaxHardcoded}s)。\n\n请先设置一个有效的窗口大小。`);
+        return; // 终止函数，不继续执行
+    }
+    
+    // 4. 计算用于验证的有效最小值 (effectiveMin)。
+    //    它应该是 "Window" 的值和 "Storage" 硬编码最小值中，较大的那一个。
+    const effectiveMin = Math.max(winSize, retMinHardcoded);
+
+    // 5. 使用计算出的有效最小值进行验证
+    const r = validateNumber('retSize', effectiveMin, retMaxHardcoded, "Retention");
+    
+    if (r !== null) {
+        apiPost('/api/command', { cmd: `[ACTION] SET_RETENTION R=${r}` });
+    }
 }
+
 function sendManualData() {
     const val = document.getElementById('manualInput').value;
     if (val) {

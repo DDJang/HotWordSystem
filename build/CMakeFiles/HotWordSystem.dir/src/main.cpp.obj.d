@@ -471,7 +471,6 @@ CMakeFiles/HotWordSystem.dir/src/main.cpp.obj: \
  D:/cppRepositories/HotWordSystem/third_party/utfcpp/source/utf8/cpp11.h \
  D:/cppRepositories/HotWordSystem/third_party/utfcpp/source/utf8/checked.h \
  D:/cppRepositories/HotWordSystem/third_party/utfcpp/source/utf8/unchecked.h \
- D:/cppRepositories/HotWordSystem/include/SlidingWindow.h \
  D:/cppRepositories/HotWordSystem/include/PersistenceManager.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/iomanip \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/quoted_string.h \
@@ -509,6 +508,7 @@ CMakeFiles/HotWordSystem.dir/src/main.cpp.obj: \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/numeric \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/bits/stl_numeric.h \
  D:/mingw64/lib/gcc/x86_64-w64-mingw32/15.1.0/include/c++/pstl/glue_numeric_defs.h \
+ D:/cppRepositories/HotWordSystem/include/SlidingWindow.h \
  D:/cppRepositories/HotWordSystem/include/APIServer.h \
  D:/cppRepositories/HotWordSystem/third_party/httplib/httplib.h \
  D:/mingw64/x86_64-w64-mingw32/include/io.h \

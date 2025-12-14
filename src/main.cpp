@@ -12,6 +12,32 @@
 #include "CommandExecutor.h"
 #include "APIServer.h"
 
+// 【新增】在这里包含 SlidingWindow.h，因为它在 SystemContext 的构造函数中需要
+#include "SlidingWindow.h"
+
+// 【新增】SystemContext 构造函数和析构函数的实现
+SystemContext::SystemContext() {
+    // 路径配置
+    const char* DICT_PATH = "dict/jieba.dict.utf8";
+    const char* HMM_PATH = "dict/hmm_model.utf8";
+    const char* USER_DICT_PATH = "dict/user.dict.utf8";
+    const char* IDF_PATH = "dict/idf.utf8";
+    const char* STOP_WORD_PATH = "dict/stop_words.utf8";
+    const char* SENSITIVE_PATH = "dict/sensitive_words.txt";
+
+    // 确保敏感词文件存在
+    std::ofstream tmp(SENSITIVE_PATH, std::ios::app);
+    tmp.close();
+
+    // 初始化组件
+    processor = std::make_unique<TextProcessor>(DICT_PATH, HMM_PATH, USER_DICT_PATH, IDF_PATH, STOP_WORD_PATH, SENSITIVE_PATH);
+    window = std::make_unique<SlidingWindow>(600, *this);
+    persistence = std::make_unique<PersistenceManager>("data/history.log");
+    monitor = std::make_unique<PerformanceMonitor>();
+}
+
+SystemContext::~SystemContext() = default; // 或者 {}
+
 int main() {
     #ifdef _WIN32
     SetConsoleOutputCP(65001);
