@@ -166,54 +166,70 @@ function validateTime(id) {
     return val;
 }
 
-function togglePosAll(el, suppressUpdate = false) {
-    const isAll = el.checked;
+
+// 切换词性过滤启用状态
+function togglePosFilter(el, suppressUpdate = false) {
+    const isEnabled = el.checked; // 勾选 = 启用过滤
     const configArea = document.getElementById('posConfigArea');
-    if (isAll) {
-        configArea.style.opacity = "0.4";
-        configArea.style.pointerEvents = "none";
-    } else {
+    
+    // UI 视觉反馈
+    if (isEnabled) {
         configArea.style.opacity = "1";
         configArea.style.pointerEvents = "auto";
+    } else {
+        configArea.style.opacity = "0.4";
+        configArea.style.pointerEvents = "none";
     }
+
     if (!suppressUpdate) {
         updateConfig();
     }
 }
 
-function toggleSensitiveAll(el, suppressUpdate = false) {
-    const isAll = el.checked;
+// 切换敏感词过滤启用状态
+function toggleSensitiveFilter(el, suppressUpdate = false) {
+    const isEnabled = el.checked; // 勾选 = 启用过滤
     const configArea = document.getElementById('sensitiveConfigArea');
-    if (isAll) {
-        configArea.style.opacity = "0.4";
-        configArea.style.pointerEvents = "none";
-    } else {
+    
+    if (isEnabled) {
         configArea.style.opacity = "1";
         configArea.style.pointerEvents = "auto";
+    } else {
+        configArea.style.opacity = "0.4";
+        configArea.style.pointerEvents = "none";
     }
+
     if (!suppressUpdate) {
         updateConfig();
     }
 }
+
 
 function updateConfig() {
-    const allowPosAll = document.getElementById('cb_all').checked;
-    const allowSensitiveAll = document.getElementById('cb_sensitive_allow').checked;
+    // 【关键】后台是 allow_all (是否保留所有)
+    // 我们的开关是 enable_filter (是否启用过滤)
+    // 所以：allow_all = !enable_filter
+    
+    const enablePosFilter = document.getElementById('cb_filter_pos_enable').checked;
+    const enableSensitiveFilter = document.getElementById('cb_filter_sensitive_enable').checked;
+    
     const checks = document.querySelectorAll('.pos-item:checked');
     let tags = [];
     checks.forEach(c => tags.push(c.value));
 
     apiPost('/api/config', {
-        allow_all: allowPosAll,
-        allow_sensitive: allowSensitiveAll,
+        allow_all: !enablePosFilter,          // 取反
+        allow_sensitive: !enableSensitiveFilter, // 取反 (allow_sensitive=true 表示保留所有敏感词，即不过滤)
         tags: tags
     });
-
-    showNotification('配置已更新', '新的过滤规则已应用，从当前时间戳开始生效。', 'success', 3000);
+    
+    showNotification('配置已更新', '新的过滤规则已应用', 'success', 2000);
 }
+
 
 function loadConfigState() {
     fetch('/api/config').then(r => r.json()).then(d => {
+        // 加载敏感词列表
         const div = document.getElementById('sensitiveList'); div.innerHTML = "";
         if (d.sensitive_words) {
             d.sensitive_words.forEach(w => {
@@ -228,14 +244,19 @@ function loadConfigState() {
             });
         }
 
-        const cbPos = document.getElementById('cb_all');
-        cbPos.checked = d.allow_all;
-        togglePosAll(cbPos, true);
+        // --- 词性过滤 ---
+        // 后台 d.allow_all 为 true -> 代表保留所有 -> 开关应该【不勾选】
+        const cbPos = document.getElementById('cb_filter_pos_enable');
+        cbPos.checked = !d.allow_all; // 取反
+        togglePosFilter(cbPos, true); // 初始化视觉状态
 
-        const cbSens = document.getElementById('cb_sensitive_allow');
-        cbSens.checked = !!d.allow_sensitive;
-        toggleSensitiveAll(cbSens, true);
+        // --- 敏感词过滤 ---
+        // 后台 d.allow_sensitive 为 true -> 代表保留所有 -> 开关应该【不勾选】
+        const cbSens = document.getElementById('cb_filter_sensitive_enable');
+        cbSens.checked = !d.allow_sensitive; // 取反
+        toggleSensitiveFilter(cbSens, true); // 初始化视觉状态
 
+        // 加载选中的标签
         if (d.tags) {
             const checkboxes = document.querySelectorAll('.pos-item');
             checkboxes.forEach(cb => cb.checked = false);
@@ -553,10 +574,37 @@ function closeConfigModal(e) {
  * 显示词性过滤的帮助信息
  */
 function showPosInfo() {
-    showNotification(
-        '词性配置说明', 
-        '<strong>蓝色高亮</strong> 的标签代表 <strong>保留</strong> 该词性，灰色标签代表过滤掉该词性。', 
-        'success', // 使用绿色成功样式，看起来比较友好
-        5000
-    );
+    const isEnabled = document.getElementById('cb_filter_pos_enable').checked;
+    
+    if (!isEnabled) {
+        showNotification(
+            '提示',
+            '当前 <strong>未启用</strong> 词性过滤，系统将保留并统计所有接收到的词汇。',
+            'warning'
+        );
+    } else {
+        showNotification(
+            '词性配置说明', 
+            '蓝色高亮</strong> 的标签代表 <strong>保留</strong> 该词性，灰色标签代表过滤掉该词性。', 
+            'success'
+        );
+    }
+}
+
+function showSensitiveInfo() {
+    const isEnabled = document.getElementById('cb_filter_sensitive_enable').checked;
+    
+    if (!isEnabled) {
+        showNotification(
+            '提示',
+            '当前 <strong>未启用</strong> 敏感词过滤，所有敏感词都将正常显示在榜单中。',
+            'warning'
+        );
+    } else {
+        showNotification(
+            '敏感词配置说明', 
+            '列表中的词汇将被系统自动屏蔽，不会出现在热词统计中。', 
+            'success'
+        );
+    }
 }

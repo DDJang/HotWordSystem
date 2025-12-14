@@ -834,3 +834,36 @@ input:checked+.slider:before {
 .input-group-styled button:hover {
     background-color: #2563eb;
 }
+
+
+/* --- 标题栏开关组样式 --- */
+.header-toggle-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto; /* 将开关推到右侧，紧挨着 info 图标 */
+    margin-right: 12px; /* 与 info 图标的间距 */
+}
+
+.toggle-label-sm {
+    font-size: 13px;
+    color: #4b5563;
+    font-weight: 500;
+}
+
+/* 小型滑动开关 */
+.switch.sm {
+    width: 36px;
+    height: 20px;
+}
+
+.switch.sm .slider:before {
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+}
+
+.switch.sm input:checked + .slider:before {
+    transform: translateX(16px);
+}

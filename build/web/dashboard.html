@@ -126,12 +126,22 @@
         </div>
 
         <!-- 过滤配置 (拆分标题版) -->
-        <!-- === 第一部分：词性过滤配置 (带Info按钮版) === -->
+        <!-- === 第一部分：词性过滤配置 === -->
         <div class="control-group">
-            <!-- 标题行：复用 header-row 实现下划线和图标布局 -->
             <div class="header-row">
-                <h3>🏷️ 词性过滤配置</h3>
-                <div class="info-trigger" onclick="showPosInfo()" title="查看配置说明">
+                <h3>🏷️ 词性过滤</h3>
+
+                <!-- 标题栏开关 -->
+                <div class="header-toggle-group">
+                    <span class="toggle-label-sm">启用过滤</span>
+                    <label class="switch sm">
+                        <!-- 注意：勾选代表“不保留所有”即“启用过滤” -->
+                        <input type="checkbox" id="cb_filter_pos_enable" onchange="togglePosFilter(this)">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <div class="info-trigger" onclick="showPosInfo()" title="查看说明">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
                         stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -141,17 +151,8 @@
                 </div>
             </div>
 
-            <label class="toggle-row" for="cb_all">
-                <span class="toggle-label">保留所有词性</span>
-                <div class="switch">
-                    <input type="checkbox" id="cb_all" onchange="togglePosAll(this)">
-                    <span class="slider"></span>
-                </div>
-            </label>
-
+            <!-- 移除了原本的 toggle-row，现在通过 CSS 透明度控制禁用状态 -->
             <div id="posConfigArea" class="config-section">
-                <!-- ❌ 已移除原本的 selection-hint 文字提示块 -->
-
                 <div class="tag-section-title">名词类</div>
                 <div class="tag-container">
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="n"
@@ -182,17 +183,30 @@
             </div>
         </div>
 
-        <!-- === 第二部分：敏感词过滤配置 (独立卡片) === -->
+        <!-- === 第二部分：敏感词过滤配置 === -->
         <div class="control-group">
-            <h3>🛡️ 敏感词过滤配置</h3>
+            <div class="header-row">
+                <h3>🛡️ 敏感词过滤</h3>
 
-            <label class="toggle-row" for="cb_sensitive_allow">
-                <span class="toggle-label">保留所有敏感词</span>
-                <div class="switch">
-                    <input type="checkbox" id="cb_sensitive_allow" onchange="toggleSensitiveAll(this)">
-                    <span class="slider"></span>
+                <!-- 标题栏开关 -->
+                <div class="header-toggle-group">
+                    <span class="toggle-label-sm">启用过滤</span>
+                    <label class="switch sm">
+                        <!-- 注意：勾选代表“不保留所有敏感词”即“启用过滤” -->
+                        <input type="checkbox" id="cb_filter_sensitive_enable" onchange="toggleSensitiveFilter(this)">
+                        <span class="slider round"></span>
+                    </label>
                 </div>
-            </label>
+
+                <div class="info-trigger" onclick="showSensitiveInfo()" title="查看说明">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                </div>
+            </div>
 
             <div id="sensitiveConfigArea" class="config-section">
                 <div class="input-group-styled">
