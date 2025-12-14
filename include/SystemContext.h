@@ -17,14 +17,14 @@ public:
     // 全局时间戳 (原子操作或仅在单线程写入，多线程读取)
     std::atomic<long long> lastTimestamp{0};
 
-    // 【新增】压测终止信号 flag
+    // 压测终止信号 flag
     // true 表示需要立即停止，false 表示正常运行
     std::atomic<bool> abortBenchmark{false}; 
 
-    // 【新增】退出标志位
+    // 退出标志位
     std::atomic<bool> shouldExit{false}; 
 
-    // 【新增】一个全局互斥锁，用于保护对 ctx 成员的复杂访问
+    // 一个全局互斥锁，用于保护对 ctx 成员的复杂访问
     std::mutex global_mutex; 
 
     SystemContext() {

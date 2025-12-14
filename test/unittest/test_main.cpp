@@ -183,7 +183,7 @@ void test_Persistence() {
 }
 
 // ----------------------
-// 5. [新增] 测试基于文件的数据处理 (Data-Driven)
+// 5. 测试基于文件的数据处理 (Data-Driven)
 // ----------------------
 void test_FileProcessing() {
     std::cout << "\n--- Testing File Processing (testdata/sample_text.txt) ---" << std::endl;
@@ -232,7 +232,7 @@ void test_FileProcessing() {
 }
 
 // ----------------------
-// 6. [新增] 测试历史日志回放 (Log Replay)
+// 6. 测试历史日志回放 (Log Replay)
 // ----------------------
 void test_LogReplay() {
     std::cout << "\n--- Testing Log Replay (testdata/mock_history.log) ---" << std::endl;

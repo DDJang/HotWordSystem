@@ -23,7 +23,6 @@
 #define _getcwd getcwd
 #endif
 
-
 using json = nlohmann::json;
 
 class APIServer {
@@ -32,7 +31,7 @@ private:
     CommandExecutor& executor;
     httplib::Server svr;
 
-    // 【新增】静态资源搜索路径：优先 web/ 目录，兼顾构建目录结构
+    // 静态资源搜索路径：优先 web/ 目录，兼顾构建目录结构
     const std::vector<std::string> baseDirs = { "web/", "../web/", "./" };
 
 public:
@@ -46,7 +45,7 @@ public:
     }
 
 private:
-    // 【新增】辅助：获取文件的 MIME 类型
+    // 辅助：获取文件的 MIME 类型
     std::string getMimeType(const std::string& path) {
         if (path.find(".html") != std::string::npos) return "text/html";
         if (path.find(".css") != std::string::npos) return "text/css";
@@ -57,7 +56,7 @@ private:
         return "text/plain";
     }
 
-    // 【新增】辅助：尝试从配置的目录列表中读取文件内容
+    // 辅助：尝试从配置的目录列表中读取文件内容
     bool readFile(const std::string& filename, std::string& outContent) {
         for (const auto& dir : baseDirs) {
             std::string fullPath = dir + filename;
@@ -73,7 +72,7 @@ private:
     }
 
     void setupRoutes() {
-        // 1. 【修改】通用静态文件处理 (HTML, CSS, JS)
+        // 1. 通用静态文件处理 (HTML, CSS, JS)
         // 正则含义：匹配所有不以 /api/ 开头的路径
         svr.Get(R"(^/(?!api/).*)", [&](const httplib::Request& req, httplib::Response& res) {
             std::string path = req.path;
@@ -112,10 +111,7 @@ private:
 
             auto topList = ctx.window->getTopK(k);
             auto range = ctx.window->getWindowRange();
-            
-            // 【修复】使用 .load() 来原子性地读取 atomic 变量的值
-            auto currentTs = ctx.lastTimestamp.load();
-            
+            auto currentTs = ctx.lastTimestamp.load();            
             auto retentionSec = ctx.window->getMaxRetention();
 
             json j;
@@ -148,8 +144,6 @@ private:
                 json resp;
                 resp["status"] = "ok";
                 resp["message"] = output;
-
-                // 【修复】使用 .load() 来原子性地读取。虽然隐式转换可能有效，但显式调用 .load() 更安全、更清晰。
                 resp["timestamp"] = GlobalUtils::formatTime(ctx.lastTimestamp.load());
 
                 res.set_content(resp.dump(), "application/json");
@@ -194,9 +188,6 @@ private:
                 j["sensitive_words"] = ctx.processor->getSensitiveWords();
                 j["allow_all"] = ctx.processor->isAllowAllPos();
                 j["allow_sensitive"] = ctx.processor->isAllowAllSensitive();
-                // 【新增】为了让前端能回显 tags，这里需要返回 tags
-                // 请确保 TextProcessor 中有 getAllowedTags() 方法
-                // 如果您还没加这个方法，前端的 tags 复选框刷新后会不显示选中状态
                 j["tags"] = ctx.processor->getAllowedTags(); 
             }
             res.set_content(j.dump(), "application/json");
@@ -233,8 +224,6 @@ private:
                 json resp;
                 resp["status"] = "ok";
                 resp["message"] = "Config updated";
-
-                // 【修复】同样，这里也使用 .load()
                 resp["timestamp"] = GlobalUtils::formatTime(ctx.lastTimestamp.load());
 
                 res.set_content(resp.dump(), "application/json");

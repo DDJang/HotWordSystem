@@ -42,8 +42,6 @@ public:
         PROCESS_MEMORY_COUNTERS_EX pmc;
         if (GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc))) {
             // WorkingSetSize 是物理内存占用
-            // PrivateUsage 是提交大小 (虚拟内存)
-            // 这里我们返回物理内存占用
             return pmc.WorkingSetSize / (1024.0 * 1024.0);
         }
 #endif
