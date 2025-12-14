@@ -21,14 +21,14 @@ var isInitialLoad = true;
 
 
 // 最大同时显示的弹窗数量
-const MAX_VISIBLE_NOTIFICATIONS = 1; 
+const MAX_VISIBLE_NOTIFICATIONS = 1;
 
 function showNotification(title, message, type = 'warning', duration = 5000) {
     const container = document.getElementById('notification-container');
 
     // === 1. 队列控制逻辑 (挤掉旧的) ===
     const activeToasts = container.querySelectorAll('.notification-toast:not(.hiding)');
-    
+
     if (activeToasts.length >= MAX_VISIBLE_NOTIFICATIONS) {
         const toCloseCount = activeToasts.length - MAX_VISIBLE_NOTIFICATIONS + 1;
         for (let i = 0; i < toCloseCount; i++) {
@@ -56,7 +56,7 @@ function showNotification(title, message, type = 'warning', duration = 5000) {
 
     // 【修改点】不再创建 button，直接填入内容
     // 点击卡片本身也可以关闭（可选，增加交互性）
-    toast.onclick = closeToast; 
+    toast.onclick = closeToast;
     toast.style.cursor = 'pointer'; // 让鼠标变成手型，提示可点击关闭
 
     toast.innerHTML = `
@@ -282,7 +282,10 @@ function log(msg, customTime = null) {
 
 function updateWindowSize() {
     const s = validateNumber('winSize', 1, 2592000, "Window Size");
-    if (s !== null) apiPost('/api/command', { cmd: `[ACTION] SET_WINDOW S=${s}` });
+    if (s !== null) {
+        apiPost('/api/command', { cmd: `[ACTION] SET_WINDOW S=${s}` });
+        showNotification('视图设置', `窗口大小已更新为 ${s} 秒`, 'success');
+    }
 }
 
 function updateRetention() {
@@ -299,23 +302,28 @@ function updateRetention() {
         alert(`❌ 操作无效：窗口大小过大\n\n您在 "Window" 中输入的值 (${winSize}s) 已超过系统最大限制 (${retMaxHardcoded}s)。\n\n请先设置一个有效的窗口大小。`);
         return; // 终止函数，不继续执行
     }
-    
+
     // 4. 计算用于验证的有效最小值 (effectiveMin)。
     //    它应该是 "Window" 的值和 "Storage" 硬编码最小值中，较大的那一个。
     const effectiveMin = Math.max(winSize, retMinHardcoded);
 
     // 5. 使用计算出的有效最小值进行验证
     const r = validateNumber('retSize', effectiveMin, retMaxHardcoded, "Retention");
-    
+
     if (r !== null) {
         apiPost('/api/command', { cmd: `[ACTION] SET_RETENTION R=${r}` });
+        showNotification('存储设置', `数据保留时间已更新为 ${r} 秒`, 'success');
     }
 }
 
 function sendManualData() {
     const val = document.getElementById('manualInput').value;
     if (val) {
-        apiPost('/api/command', { cmd: val }); document.getElementById('manualInput').value = "";
+        apiPost('/api/command', { cmd: val });
+        document.getElementById('manualInput').value = "";
+        showNotification('数据发送', '模拟数据/指令已发送至服务器', 'success');
+
+        // 【新增】检查是否为 SHUTDOWN 指令
         const shutdownRegex = /\[ACTION\]\s+SHUTDOWN/i;
         if (shutdownRegex.test(val)) {
             setTimeout(() => {
@@ -359,6 +367,8 @@ function viewHistory() {
     document.getElementById('btnBackRealtime').classList.add('btn-pulse');
     document.getElementById('history-mode-overlay').classList.add('show');
 
+    showNotification('历史回放', `已进入回放模式 [${s} ~ ${e}]，实时更新暂停`, 'warning', 4000);
+
     fetch(`/api/history_view?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}&k=${k}`)
         .then(r => r.json())
         .then(d => {
@@ -389,6 +399,9 @@ function backToRealtime() {
         series: [{ itemStyle: { color: '#3b82f6' } }],
         grid: { top: '10%' }
     });
+
+    showNotification('实时监控', '已退出回放模式，恢复实时数据流', 'success');
+
     fetchAndUpdateRealtimeChart();
 }
 
@@ -411,12 +424,16 @@ function genReport() {
     const e = validateTime('histEnd');
     if (s && e) {
         apiPost('/api/command', { cmd: `[ACTION] HISTORY START=${s} END=${e} STEP=60` });
+        showNotification('导出报告', '正在后台生成历史数据报告，请查看服务器日志', 'success');
     }
 }
 
 function runBench() {
     const n = validateNumber('benchN', 1, 100000, "Benchmark N");
-    if (n !== null) apiPost('/api/command', { cmd: `[ACTION] BENCHMARK N=${n}` });
+    if (n !== null) {
+        apiPost('/api/command', { cmd: `[ACTION] BENCHMARK N=${n}` });
+        showNotification('压力测试', `已启动压测，目标写入 ${n} 条数据`, 'warning');
+    }
 }
 
 function resetSystem() {
@@ -432,19 +449,21 @@ function resetSystem() {
         .then(r => r.json())
         .then(d => {
             isHistoryMode = false;
-            myChart.setOption({ 
-                xAxis: { data: [] }, 
+            myChart.setOption({
+                xAxis: { data: [] },
                 series: [{ data: [], itemStyle: { color: '#3b82f6' } }],
-                grid: { top: '10%' } 
+                grid: { top: '10%' }
             });
             document.getElementById('trendBody').innerHTML = "";
             document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
             document.getElementById('btnBackRealtime').classList.remove('btn-pulse');
             document.getElementById('history-mode-overlay').classList.remove('show');
             log("✅ System & Log Cleared.", "00:00:00");
+            showNotification('系统重置', '内存数据及日志文件已全部清空', 'danger', 6000);
         })
         .catch(e => {
             log("❌ " + e);
+            showNotification('重置失败', '连接服务器时发生错误', 'danger');
         });
 }
 
@@ -453,12 +472,13 @@ function shutdownSystem() {
         return;
     }
     apiPost('/api/command', { cmd: `[ACTION] SHUTDOWN` });
+    showNotification('系统关闭', '正在断开连接并停止服务...', 'danger', 10000);
     setTimeout(() => {
         document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
     }, 1000);
 }
 
-// 【新增】文件上传处理函数
+// 文件上传处理函数
 function uploadFile(event) {
     const file = event.target.files[0];
     if (!file) {
@@ -466,14 +486,18 @@ function uploadFile(event) {
     }
 
     log(`Reading file: ${file.name}...`);
+    showNotification('文件处理', `正在读取文件: ${file.name}`, 'warning');
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         const content = e.target.result;
         log(`File read successfully, sending ${Math.round(content.length / 1024)} KB to server...`);
         apiPost('/api/command', { cmd: content });
+
+        const sizeKB = Math.round(content.length / 1024);
+        showNotification('上传成功', `已发送文件内容 (${sizeKB} KB) 到服务器`, 'success');
     };
-    reader.onerror = function(e) {
+    reader.onerror = function (e) {
         log(`❌ Error reading file: ${e.type}`);
     };
     reader.readAsText(file);
