@@ -20,30 +20,58 @@ var currentBackendTimestamp = "00:00:00";
 var isInitialLoad = true;
 
 
-/**
- * 显示一个通知
- * @param {string} title - 通知的标题
- * @param {string} message - 通知的内容
- * @param {string} type - 'warning' (黄) 或 'danger' (红)
- * @param {number} duration - 自动关闭的毫秒数，0 表示不自动关闭
- */
-function showNotification(title, message, type = 'warning', duration = 8000) {
+// 最大同时显示的弹窗数量
+const MAX_VISIBLE_NOTIFICATIONS = 1; 
+
+function showNotification(title, message, type = 'warning', duration = 5000) {
     const container = document.getElementById('notification-container');
 
+    // === 1. 队列控制逻辑 (挤掉旧的) ===
+    const activeToasts = container.querySelectorAll('.notification-toast:not(.hiding)');
+    
+    if (activeToasts.length >= MAX_VISIBLE_NOTIFICATIONS) {
+        const toCloseCount = activeToasts.length - MAX_VISIBLE_NOTIFICATIONS + 1;
+        for (let i = 0; i < toCloseCount; i++) {
+            if (activeToasts[i] && typeof activeToasts[i].close === 'function') {
+                activeToasts[i].close();
+            }
+        }
+    }
+
+    // === 2. 创建弹窗 ===
     const toast = document.createElement('div');
     toast.className = `notification-toast is-${type}`;
 
+    // 定义关闭逻辑
+    const closeToast = () => {
+        if (toast.classList.contains('hiding')) return;
+        toast.classList.add('hiding');
+        toast.addEventListener('animationend', () => {
+            if (toast.parentElement) toast.remove();
+        });
+    };
+
+    // 挂载关闭方法
+    toast.close = closeToast;
+
+    // 【修改点】不再创建 button，直接填入内容
+    // 点击卡片本身也可以关闭（可选，增加交互性）
+    toast.onclick = closeToast; 
+    toast.style.cursor = 'pointer'; // 让鼠标变成手型，提示可点击关闭
+
     toast.innerHTML = `
-        <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
         <h4>${title}</h4>
         <p>${message}</p>
     `;
 
     container.appendChild(toast);
 
+    // === 3. 自动关闭定时器 ===
     if (duration > 0) {
         setTimeout(() => {
-            toast.remove();
+            if (document.body.contains(toast) && !toast.classList.contains('hiding')) {
+                closeToast();
+            }
         }, duration);
     }
 }
