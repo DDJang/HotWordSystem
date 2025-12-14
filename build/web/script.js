@@ -548,3 +548,15 @@ function closeConfigModal(e) {
         modal.classList.remove('show');
     }
 }
+
+/**
+ * 显示词性过滤的帮助信息
+ */
+function showPosInfo() {
+    showNotification(
+        '词性配置说明', 
+        '<strong>蓝色高亮</strong> 的标签代表 <strong>保留</strong> 该词性，灰色标签代表过滤掉该词性。', 
+        'success', // 使用绿色成功样式，看起来比较友好
+        5000
+    );
+}

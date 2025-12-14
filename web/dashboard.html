@@ -125,76 +125,81 @@
             </div>
         </div>
 
-        <!-- 过滤配置 (UI 优化版) -->
+        <!-- 过滤配置 (拆分标题版) -->
+        <!-- === 第一部分：词性过滤配置 (带Info按钮版) === -->
         <div class="control-group">
-            <h3>⚙️ 过滤配置</h3>
-
-            <!-- === 第一部分：词性过滤 === -->
-            <div style="margin-bottom: 20px;">
-                <div class="section-header">🏷️ 词性过滤配置</div>
-
-                <label class="toggle-row" for="cb_all">
-                    <span class="toggle-label">保留所有词性</span>
-                    <div class="switch">
-                        <input type="checkbox" id="cb_all" onchange="togglePosAll(this)">
-                        <span class="slider"></span>
-                    </div>
-                </label>
-
-                <div id="posConfigArea" class="config-section">
-                    <div class="selection-hint">
-                        高亮标签代表 <strong>保留</strong> 的词性
-                    </div>
-
-                    <div class="tag-section-title">名词类</div>
-                    <div class="tag-container">
-                        <label><input type="checkbox" class="tag-chip-input pos-item" value="n"
-                                onchange="updateConfig()"><span class="tag-chip">名 (n)</span></label>
-                        <label><input type="checkbox" class="tag-chip-input pos-item" value="nr"
-                                onchange="updateConfig()"><span class="tag-chip">人名 (nr)</span></label>
-                        <label><input type="checkbox" class="tag-chip-input pos-item" value="nz"
-                                onchange="updateConfig()"><span class="tag-chip">其他专名 (nz)</span></label>
-                        <label><input type="checkbox" class="tag-chip-input pos-item" value="ns"
-                                onchange="updateConfig()"><span class="tag-chip">地名 (ns)</span></label>
-                        <label><input type="checkbox" class="tag-chip-input pos-item" value="nt"
-                                onchange="updateConfig()"><span class="tag-chip">机构 (nt)</span></label>
-                    </div>
-
-                    <div class="tag-section-title" style="margin-top: 8px;">动/形/其他</div>
-                    <div class="tag-container">
-                        <label><input type="checkbox" class="tag-chip-input pos-item" value="v"
-                                onchange="updateConfig()"><span class="tag-chip">动 (v)</span></label>
-                        <label><input type="checkbox" class="tag-chip-input pos-item" value="vn"
-                                onchange="updateConfig()"><span class="tag-chip">名动 (vn)</span></label>
-                        <label><input type="checkbox" class="tag-chip-input pos-item" value="a"
-                                onchange="updateConfig()"><span class="tag-chip">形 (a)</span></label>
-                        <label><input type="checkbox" class="tag-chip-input pos-item" value="eng"
-                                onchange="updateConfig()"><span class="tag-chip">英文 (eng)</span></label>
-                        <label><input type="checkbox" class="tag-chip-input pos-item" value="i"
-                                onchange="updateConfig()"><span class="tag-chip">成语 (i)</span></label>
-                    </div>
+            <!-- 标题行：复用 header-row 实现下划线和图标布局 -->
+            <div class="header-row">
+                <h3>🏷️ 词性过滤配置</h3>
+                <div class="info-trigger" onclick="showPosInfo()" title="查看配置说明">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
                 </div>
             </div>
 
-            <!-- === 第二部分：敏感词过滤 === -->
-            <div style="border-top: 2px solid #e5e7eb; padding-top:15px;">
-                <div class="section-header">🛡️ 敏感词过滤配置</div>
-
-                <label class="toggle-row" for="cb_sensitive_allow">
-                    <span class="toggle-label">保留所有敏感词</span>
-                    <div class="switch">
-                        <input type="checkbox" id="cb_sensitive_allow" onchange="toggleSensitiveAll(this)">
-                        <span class="slider"></span>
-                    </div>
-                </label>
-
-                <div id="sensitiveConfigArea" class="config-section">
-                    <div class="input-group">
-                        <input type="text" id="newSensitive" placeholder="添加屏蔽词...">
-                        <button onclick="addSensitive()">+</button>
-                    </div>
-                    <div id="sensitiveList" class="tag-container"></div>
+            <label class="toggle-row" for="cb_all">
+                <span class="toggle-label">保留所有词性</span>
+                <div class="switch">
+                    <input type="checkbox" id="cb_all" onchange="togglePosAll(this)">
+                    <span class="slider"></span>
                 </div>
+            </label>
+
+            <div id="posConfigArea" class="config-section">
+                <!-- ❌ 已移除原本的 selection-hint 文字提示块 -->
+
+                <div class="tag-section-title">名词类</div>
+                <div class="tag-container">
+                    <label><input type="checkbox" class="tag-chip-input pos-item" value="n"
+                            onchange="updateConfig()"><span class="tag-chip">名 (n)</span></label>
+                    <label><input type="checkbox" class="tag-chip-input pos-item" value="nr"
+                            onchange="updateConfig()"><span class="tag-chip">人名 (nr)</span></label>
+                    <label><input type="checkbox" class="tag-chip-input pos-item" value="nz"
+                            onchange="updateConfig()"><span class="tag-chip">其他专名 (nz)</span></label>
+                    <label><input type="checkbox" class="tag-chip-input pos-item" value="ns"
+                            onchange="updateConfig()"><span class="tag-chip">地名 (ns)</span></label>
+                    <label><input type="checkbox" class="tag-chip-input pos-item" value="nt"
+                            onchange="updateConfig()"><span class="tag-chip">机构 (nt)</span></label>
+                </div>
+
+                <div class="tag-section-title" style="margin-top: 8px;">动/形/其他</div>
+                <div class="tag-container">
+                    <label><input type="checkbox" class="tag-chip-input pos-item" value="v"
+                            onchange="updateConfig()"><span class="tag-chip">动 (v)</span></label>
+                    <label><input type="checkbox" class="tag-chip-input pos-item" value="vn"
+                            onchange="updateConfig()"><span class="tag-chip">名动 (vn)</span></label>
+                    <label><input type="checkbox" class="tag-chip-input pos-item" value="a"
+                            onchange="updateConfig()"><span class="tag-chip">形 (a)</span></label>
+                    <label><input type="checkbox" class="tag-chip-input pos-item" value="eng"
+                            onchange="updateConfig()"><span class="tag-chip">英文 (eng)</span></label>
+                    <label><input type="checkbox" class="tag-chip-input pos-item" value="i"
+                            onchange="updateConfig()"><span class="tag-chip">成语 (i)</span></label>
+                </div>
+            </div>
+        </div>
+
+        <!-- === 第二部分：敏感词过滤配置 (独立卡片) === -->
+        <div class="control-group">
+            <h3>🛡️ 敏感词过滤配置</h3>
+
+            <label class="toggle-row" for="cb_sensitive_allow">
+                <span class="toggle-label">保留所有敏感词</span>
+                <div class="switch">
+                    <input type="checkbox" id="cb_sensitive_allow" onchange="toggleSensitiveAll(this)">
+                    <span class="slider"></span>
+                </div>
+            </label>
+
+            <div id="sensitiveConfigArea" class="config-section">
+                <div class="input-group-styled">
+                    <input type="text" id="newSensitive" placeholder="添加屏蔽词...">
+                    <button onclick="addSensitive()">确认添加</button>
+                </div>
+                <div id="sensitiveList" class="tag-container" style="margin-top: 10px;"></div>
             </div>
         </div>
 

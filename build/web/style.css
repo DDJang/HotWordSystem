@@ -392,19 +392,6 @@ th {
     background: #f3f4f6;
 }
 
-/* --- 新增：保留词性提示说明样式 --- */
-.selection-hint {
-    font-size: 13px;
-    color: #2563eb;
-    background-color: #eff6ff;
-    border: 1px solid #dbeafe;
-    padding: 6px 10px;
-    border-radius: 6px;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
 
 /* --- iOS 风格滑动开关容器 --- */
 .toggle-row {
@@ -809,4 +796,41 @@ input:checked+.slider:before {
     line-height: 20px;  /* 调整文字行高 */
     padding: 6px 10px;  /* 保持内边距 */
     overflow-y: hidden; /* 隐藏垂直滚动条（单行输入时更美观） */
+}
+
+/* --- 敏感词输入组样式优化 --- */
+
+.input-group-styled {
+    display: flex;
+    align-items: center; /* 垂直居中对齐 */
+    gap: 8px;            /* 输入框和按钮的间距 */
+    width: 100%;
+}
+
+/* 敏感词输入框：模仿数据模拟文本框 */
+#newSensitive {
+    flex: 1;             /* 占满剩余宽度 */
+    height: 34px;        /* 固定高度 */
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    margin-bottom: 0 !important; /* 去除默认 margin */
+    box-sizing: border-box;
+}
+
+/* 确认添加按钮 */
+.input-group-styled button {
+    width: auto !important;      /* 宽度自适应文字 */
+    padding: 0 15px !important;  /* 左右内边距 */
+    height: 34px;                /* 高度与输入框一致 */
+    line-height: 34px;           /* 文字垂直居中 */
+    white-space: nowrap;         /* 防止文字换行 */
+    margin-bottom: 0 !important;
+    background-color: #3b82f6;   /* 蓝色背景 */
+    font-size: 13px;
+    border-radius: 6px;
+}
+
+.input-group-styled button:hover {
+    background-color: #2563eb;
 }
