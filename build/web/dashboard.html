@@ -205,18 +205,34 @@
         </div>
     </div>
 
-    <!-- 性能统计弹窗 -->
+    <!-- 性能统计弹窗 (液态版) -->
     <div id="statsModal" class="modal-overlay" onclick="closeStats(event)">
         <div class="modal-content">
-            <h2 style="border-bottom:none; margin-bottom:10px;">🚀 系统性能</h2>
-            <div class="stat-row"><span>运行时间</span><span class="stat-val" id="st_time">0s</span></div>
-            <div class="stat-row"><span>处理行数</span><span class="stat-val" id="st_lines">0</span></div>
-            <div class="stat-row"><span>处理词数</span><span class="stat-val" id="st_words">0</span></div>
-            <div class="stat-row"><span>吞吐量 (QPS)</span><span class="stat-val" id="st_qps">0</span></div>
-            <div class="stat-row"><span>内存占用</span><span class="stat-val" style="color:#dc2626;" id="st_mem">0 MB</span>
+            <h2>🚀 系统性能指标</h2>
+
+            <div class="stat-row">
+                <span>⏳ 运行时间</span>
+                <span class="stat-val" id="st_time">0s</span>
             </div>
-            <div style="text-align:right; margin-top:15px;">
-                <button onclick="closeStats(null)" class="secondary" style="width:auto;">关闭</button>
+            <div class="stat-row">
+                <span>📝 处理行数</span>
+                <span class="stat-val" id="st_lines">0</span>
+            </div>
+            <div class="stat-row">
+                <span>🔤 处理词数</span>
+                <span class="stat-val" id="st_words">0</span>
+            </div>
+            <div class="stat-row">
+                <span>⚡ 吞吐量 (QPS)</span>
+                <span class="stat-val" id="st_qps">0</span>
+            </div>
+            <div class="stat-row">
+                <span>💾 内存占用</span>
+                <span class="stat-val" style="color:#dc2626;" id="st_mem">0 MB</span>
+            </div>
+
+            <div class="modal-actions">
+                <button onclick="closeStats(null)">关闭窗口</button>
             </div>
         </div>
     </div>

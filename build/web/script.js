@@ -406,17 +406,27 @@ function backToRealtime() {
 }
 
 function showStats() {
+    // 先获取数据
     fetch('/api/stats').then(r => r.json()).then(d => {
         document.getElementById('st_time').innerText = d.runtime.toFixed(2) + " s";
         document.getElementById('st_lines').innerText = d.lines;
         document.getElementById('st_words').innerText = d.words;
         document.getElementById('st_qps').innerText = d.qps.toFixed(2);
         document.getElementById('st_mem').innerText = d.memory.toFixed(2) + " MB";
-        document.getElementById('statsModal').style.display = 'flex';
+        
+        // 数据填充完毕后，添加 .show 类触发 CSS 动画
+        const modal = document.getElementById('statsModal');
+        modal.classList.add('show');
     });
 }
+
 function closeStats(e) {
-    if (!e || e.target.id === 'statsModal') document.getElementById('statsModal').style.display = 'none';
+    const modal = document.getElementById('statsModal');
+    
+    // 如果没有传事件对象(点击按钮)，或者点击的是遮罩层本身(背景)，则关闭
+    if (!e || e.target === modal) {
+        modal.classList.remove('show');
+    }
 }
 
 function genReport() {
