@@ -229,26 +229,38 @@
         <!-- 历史回放 -->
         <div class="control-group">
             <h3>📂 历史回放</h3>
-            <div class="row">
-                <input type="text" id="histStart" value="00:00:00" placeholder="HH:MM:SS" maxlength="8">
-                <input type="text" id="histEnd" value="00:10:00" placeholder="HH:MM:SS" maxlength="8">
+            <!-- 修改：增加了 label 标签和对齐样式 -->
+            <div class="row" style="align-items: center; gap: 8px;">
+                <span style="font-size: 12px; color: #6b7280; white-space: nowrap;">起始</span>
+                <input type="text" id="histStart" value="00:00:00" placeholder="HH:MM:SS" maxlength="8"
+                    style="margin-bottom: 0;">
+
+                <span style="font-size: 12px; color: #6b7280; white-space: nowrap;">终止</span>
+                <input type="text" id="histEnd" value="00:10:00" placeholder="HH:MM:SS" maxlength="8"
+                    style="margin-bottom: 0;">
             </div>
-            <div class="row">
+
+            <div class="row" style="margin-top: 8px;">
                 <button onclick="viewHistory()" style="background: #8b5cf6;">回放图表</button>
                 <button id="btnBackRealtime" onclick="backToRealtime()">返回实时</button>
             </div>
         </div>
 
         <!-- 系统操作 -->
-        <div class="control-group" style="border-color:#fca5a5; background:#fef2f2;">
+        <div class="control-group">
             <h3 style="color:#b91c1c;">⚡ 系统操作</h3>
             <div class="row">
                 <input type="number" id="benchN" value="1000" min="1" max="100000" placeholder="Max 100000">
-                <button onclick="runBench()" class="danger">启动压力测试</button>
+                <!-- 修改：class 改为 warning (橙色) -->
+                <button onclick="runBench()" class="warning">启动压力测试</button>
             </div>
+
+            <!-- 修改：保留 danger (红色) -->
             <button onclick="resetSystem()" class="danger" style="margin-top:5px;">清空所有数据</button>
             <button onclick="shutdownSystem()" class="danger" style="margin-top:5px; background:#7f1d1d;">终止程序</button>
         </div>
+
+        
     </div>
 
     <!-- 性能统计弹窗 (液态版) -->
