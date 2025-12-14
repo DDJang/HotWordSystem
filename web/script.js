@@ -144,25 +144,51 @@ var mainInterval = setInterval(() => {
 function validateNumber(id, min, max, name) {
     const el = document.getElementById(id);
     const val = parseInt(el.value);
+
+    // 检查1：是否为有效数字
     if (isNaN(val)) {
-        alert(`❌ [${name}] 请输入有效的数字`);
-        return null;
+        // 原来的 alert() 已被替换
+        showNotification(
+            '输入无效',
+            `[${name}] 请输入一个有效的数字。`,
+            'danger', // 红色危险弹窗
+            5000      // 显示5秒
+        );
+        return null; // 保持原有逻辑，中断操作
     }
+
+    // 检查2：是否在允许的范围内
     if (val < min || val > max) {
-        alert(`❌ [${name}] 数值必须在 ${min} ~ ${max} 之间`);
+        // 原来的 alert() 已被替换
+        showNotification(
+            '数值越界',
+            `[${name}] 的值必须在 ${min} 到 ${max} 之间。`,
+            'danger',
+            5000
+        );
         return null;
     }
+
     return val;
 }
+
 
 function validateTime(id) {
     const el = document.getElementById(id);
     const val = el.value.trim();
     const regex = /^\d{1,2}:\d{1,2}:\d{1,2}$/;
+
     if (!regex.test(val)) {
-        alert(`❌ 时间格式错误: ${val}\n请使用 HH:MM:SS (例如 12:30:00)`);
+        // 原来的 alert() 已被替换
+        showNotification(
+            '格式错误',
+            `您输入的时间“${val}”格式不正确，请使用 HH:MM:SS 格式。`,
+            'danger',
+            5000
+        );
         return null;
     }
+
     return val;
 }
 
@@ -171,7 +197,7 @@ function validateTime(id) {
 function togglePosFilter(el, suppressUpdate = false) {
     const isEnabled = el.checked; // 勾选 = 启用过滤
     const configArea = document.getElementById('posConfigArea');
-    
+
     // UI 视觉反馈
     if (isEnabled) {
         configArea.style.opacity = "1";
@@ -190,7 +216,7 @@ function togglePosFilter(el, suppressUpdate = false) {
 function toggleSensitiveFilter(el, suppressUpdate = false) {
     const isEnabled = el.checked; // 勾选 = 启用过滤
     const configArea = document.getElementById('sensitiveConfigArea');
-    
+
     if (isEnabled) {
         configArea.style.opacity = "1";
         configArea.style.pointerEvents = "auto";
@@ -209,10 +235,10 @@ function updateConfig() {
     // 【关键】后台是 allow_all (是否保留所有)
     // 我们的开关是 enable_filter (是否启用过滤)
     // 所以：allow_all = !enable_filter
-    
+
     const enablePosFilter = document.getElementById('cb_filter_pos_enable').checked;
     const enableSensitiveFilter = document.getElementById('cb_filter_sensitive_enable').checked;
-    
+
     const checks = document.querySelectorAll('.pos-item:checked');
     let tags = [];
     checks.forEach(c => tags.push(c.value));
@@ -222,7 +248,7 @@ function updateConfig() {
         allow_sensitive: !enableSensitiveFilter, // 取反 (allow_sensitive=true 表示保留所有敏感词，即不过滤)
         tags: tags
     });
-    
+
     showNotification('配置已更新', '新的过滤规则已应用', 'success', 2000);
 }
 
@@ -325,7 +351,12 @@ function updateRetention() {
 
     // 3. 【核心修复】预检查：Window 的值是否已经超过了系统允许的最大值？
     if (winSize > retMaxHardcoded) {
-        alert(`❌ 操作无效：窗口大小过大\n\n您在 "Window" 中输入的值 (${winSize}s) 已超过系统最大限制 (${retMaxHardcoded}s)。\n\n请先设置一个有效的窗口大小。`);
+        showNotification(
+            '操作无效',
+            `窗口大小 (${winSize}s) 不能超过系统最大存储上限 (${retMaxHardcoded}s)。`,
+            'danger',
+            6000 // 显示时间稍长，因为信息量大
+        );
         return; // 终止函数，不继续执行
     }
 
@@ -439,7 +470,7 @@ function showStats() {
         document.getElementById('st_words').innerText = d.words;
         document.getElementById('st_qps').innerText = d.qps.toFixed(2);
         document.getElementById('st_mem').innerText = d.memory.toFixed(2) + " MB";
-        
+
         // 数据填充完毕后，添加 .show 类触发 CSS 动画
         const modal = document.getElementById('statsModal');
         modal.classList.add('show');
@@ -448,7 +479,7 @@ function showStats() {
 
 function closeStats(e) {
     const modal = document.getElementById('statsModal');
-    
+
     // 如果没有传事件对象(点击按钮)，或者点击的是遮罩层本身(背景)，则关闭
     if (!e || e.target === modal) {
         modal.classList.remove('show');
@@ -595,7 +626,7 @@ function closeConfigModal(e) {
  */
 function showPosInfo() {
     const isEnabled = document.getElementById('cb_filter_pos_enable').checked;
-    
+
     if (!isEnabled) {
         showNotification(
             '提示',
@@ -604,8 +635,8 @@ function showPosInfo() {
         );
     } else {
         showNotification(
-            '词性配置说明', 
-            '蓝色高亮</strong> 的标签代表 <strong>保留</strong> 该词性，灰色标签代表过滤掉该词性。', 
+            '词性配置说明',
+            '蓝色高亮</strong> 的标签代表 <strong>保留</strong> 该词性，灰色标签代表过滤掉该词性。',
             'success'
         );
     }
@@ -613,7 +644,7 @@ function showPosInfo() {
 
 function showSensitiveInfo() {
     const isEnabled = document.getElementById('cb_filter_sensitive_enable').checked;
-    
+
     if (!isEnabled) {
         showNotification(
             '提示',
@@ -622,8 +653,8 @@ function showSensitiveInfo() {
         );
     } else {
         showNotification(
-            '敏感词配置说明', 
-            '列表中的词汇将被系统自动屏蔽，不会出现在热词统计中。', 
+            '敏感词配置说明',
+            '列表中的词汇将被系统自动屏蔽，不会出现在热词统计中。',
             'success'
         );
     }
