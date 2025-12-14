@@ -60,24 +60,45 @@
             <div id="log">Connecting to server...</div>
         </div>
 
-        <!-- 时间窗口 -->
+        <!-- 视图设置 (修正版) -->
         <div class="control-group">
-            <h3>⏳ 视图设置</h3>
-            <div class="dual-input">
-                <label>Window:</label>
-                <input type="number" id="winSize" value="600" min="1" max="2592000" placeholder="1-2592000">
-                <button onclick="updateWindowSize()" style="width: 60px;">应用</button>
+            <!-- 标题行：使用 header-row 容器来处理下划线 -->
+            <div class="header-row">
+                <h3>⏳ 视图设置</h3>
+                <div class="info-trigger" onclick="showConfigInfo()" title="查看配置详情">
+                    <!-- 稍微简化 SVG 路径，确保显示清晰 -->
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                </div>
             </div>
-            <div class="dual-input">
-                <label>Storage:</label>
-                <input type="number" id="retSize" value="6000" min="600" max="2592000" placeholder="> Window">
-                <button onclick="updateRetention()" style="width: 60px;">应用</button>
+
+            <!-- 窗口大小 -->
+            <div class="dual-input compact">
+                <label>窗口大小</label> <!-- 去掉冒号，更现代 -->
+                <input type="number" id="winSize" class="mini-input" value="600" min="1" max="2592000">
+                <span class="unit">秒</span>
+                <button onclick="updateWindowSize()" class="btn-xs">应用</button>
             </div>
-            <div class="dual-input">
-                <label>Top-K:</label>
-                <input type="number" id="displayK" value="10" min="1" max="100">
+
+            <!-- 存储上限 -->
+            <div class="dual-input compact">
+                <label>存储上限</label>
+                <input type="number" id="retSize" class="mini-input" value="6000" min="600" max="2592000">
+                <span class="unit">秒</span>
+                <button onclick="updateRetention()" class="btn-xs">应用</button>
             </div>
-            <div style="font-size:11px; color:#999; text-align:right;" id="retentionInfo">Retention: -- s</div>
+
+            <!-- 显示数量 -->
+            <div class="dual-input compact">
+                <label>显示数量</label>
+                <input type="number" id="displayK" class="mini-input" value="10" min="1" max="100">
+                <span class="unit">个</span>
+                <!-- 不需要占位 div 了，因为现在是左对齐布局 -->
+            </div>
         </div>
 
         <!-- 数据模拟 -->
@@ -233,6 +254,40 @@
 
             <div class="modal-actions">
                 <button onclick="closeStats(null)">关闭窗口</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 配置详情弹窗 (液态版) -->
+    <div id="configModal" class="modal-overlay" onclick="closeConfigModal(event)">
+        <div class="modal-content" style="width: 340px;"> <!-- 稍微窄一点 -->
+            <h2>⚙️ 当前系统配置</h2>
+
+            <div class="stat-row">
+                <span>🪟 窗口大小 (Window)</span>
+                <span class="stat-val" id="cfg_win">-- s</span>
+            </div>
+
+            <div class="stat-row">
+                <span>💾 存储上限 (Storage)</span>
+                <span class="stat-val" id="cfg_ret">-- s</span>
+            </div>
+
+            <div class="stat-row">
+                <span>📊 显示数量 (Top-K)</span>
+                <span class="stat-val" id="cfg_k">--</span>
+            </div>
+
+            <!-- 装饰性说明文字 -->
+            <div
+                style="margin-top: 15px; font-size: 12px; color: #6b7280; line-height: 1.5; background: rgba(255,255,255,0.4); padding: 10px; border-radius: 8px;">
+                <p style="margin:0 0 5px 0;"><strong>💡 说明：</strong></p>
+                <p style="margin:0;">• <strong>Window</strong>: 实时热词榜统计的时间跨度。</p>
+                <p style="margin:0;">• <strong>Storage</strong>: 内存中保留的历史数据最长时间。</p>
+            </div>
+
+            <div class="modal-actions">
+                <button onclick="closeConfigModal(null)">关闭</button>
             </div>
         </div>
     </div>

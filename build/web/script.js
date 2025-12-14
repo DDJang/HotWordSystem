@@ -515,3 +515,34 @@ function uploadFile(event) {
     // 清空 input 的值，这样用户可以重复上传同一个文件
     event.target.value = '';
 }
+
+/**
+ * 点击信息图标时触发
+ * 弹出模态框显示配置详情
+ */
+function showConfigInfo() {
+    // 1. 获取当前输入框的值（这里假设输入框的值就是当前生效的值，或者你可以从全局变量获取）
+    const win = document.getElementById('winSize').value;
+    const ret = document.getElementById('retSize').value;
+    const k = document.getElementById('displayK').value;
+
+    // 2. 填充到模态框
+    document.getElementById('cfg_win').innerText = win + " s";
+    document.getElementById('cfg_ret').innerText = ret + " s";
+    document.getElementById('cfg_k').innerText = k;
+
+    // 3. 显示模态框 (添加 .show 类)
+    const modal = document.getElementById('configModal');
+    modal.classList.add('show');
+}
+
+/**
+ * 关闭配置详情模态框
+ */
+function closeConfigModal(e) {
+    const modal = document.getElementById('configModal');
+    // 如果没有传事件对象(点击按钮)，或者点击的是遮罩层本身(背景)，则关闭
+    if (!e || e.target === modal) {
+        modal.classList.remove('show');
+    }
+}
