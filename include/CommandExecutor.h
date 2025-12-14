@@ -207,6 +207,12 @@ private:
             {
                 std::lock_guard<std::mutex> lock(ctx.global_mutex);
 
+                // 【核心修复】检查 2: 锁内检查 (为了正确性)
+                // 如果在我们等待锁的时候，RESET 命令已经执行，那么我们必须在这里中止操作
+                if (ctx.abortBenchmark) {
+                    return; // 直接跳出循环，不再写入这“最后一批”数据
+                }
+
                 std::vector<std::string> words = ctx.processor->process(sentence);
                 ctx.window->addData(startTs, words);
                 ctx.persistence->logData(startTs, words);
