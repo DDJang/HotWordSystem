@@ -880,3 +880,13 @@ input:checked+.slider:before {
     transform: translateX(16px);
 }
 
+
+
+/* 强化控制台标题样式 */
+.control-group h3 {
+    font-size: 16px;      /* 加大字体 (原 14px) */
+    font-weight: 800;     /* 加粗 (可选值: 700, 800, 900) */
+    color: #1f2937;        /* 颜色加深，更突出 */
+    padding-bottom: 8px;  /* 增加底部间距，让下划线更协调 */
+    letter-spacing: 0.5px; /* 可选：增加一点字间距，提升质感 */
+}
