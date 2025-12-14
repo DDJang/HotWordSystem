@@ -112,17 +112,6 @@ var mainInterval = setInterval(() => {
     fetch('/api/trends?k=10').then(r => r.json()).then(list => renderTrends(list));
 }, 1000);
 
-function showConfigFeedback() {
-    const feedbackEl = document.getElementById('configFeedback');
-    if (feedbackTimer) {
-        clearTimeout(feedbackTimer);
-    }
-    feedbackEl.classList.add('show');
-    feedbackTimer = setTimeout(() => {
-        feedbackEl.classList.remove('show');
-    }, 2500);
-}
-
 
 function validateNumber(id, min, max, name) {
     const el = document.getElementById(id);
@@ -191,7 +180,8 @@ function updateConfig() {
         allow_sensitive: allowSensitiveAll,
         tags: tags
     });
-    showConfigFeedback();
+
+    showNotification('配置已更新', '新的过滤规则已应用，从当前时间戳开始生效。', 'success', 3000);
 }
 
 function loadConfigState() {
@@ -313,14 +303,14 @@ function addSensitive() {
         apiPost('/api/config', { add_sensitive: w });
         document.getElementById('newSensitive').value = "";
         setTimeout(loadConfigState, 500);
-        showConfigFeedback();
+        showNotification('屏蔽词添加成功', `已将 "${w}" 加入屏蔽列表。`, 'success');
     }
 }
 function removeSensitive(w) {
     if (confirm("Remove " + w + "?")) {
         apiPost('/api/config', { remove_sensitive: w });
         setTimeout(loadConfigState, 500);
-        showConfigFeedback();
+        showNotification('屏蔽词已移除', `"${w}" 已从屏蔽列表中删除。`, 'success');
     }
 }
 
@@ -414,13 +404,14 @@ function resetSystem() {
         .then(r => r.json())
         .then(d => {
             isHistoryMode = false;
-            myChart.setOption({ xAxis: { data: [] }, series: [{ data: [], itemStyle: { color: '#3b82f6' } }] });
+            myChart.setOption({ 
+                xAxis: { data: [] }, 
+                series: [{ data: [], itemStyle: { color: '#3b82f6' } }],
+                grid: { top: '10%' } 
+            });
             document.getElementById('trendBody').innerHTML = "";
             document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
-            // 3. 【核心修复】在这里，手动移除“返回实时”按钮的脉冲效果
             document.getElementById('btnBackRealtime').classList.remove('btn-pulse');
-
-            // 4. (可选但推荐) 同时，也应该隐藏历史模式的提示条
             document.getElementById('history-mode-overlay').classList.remove('show');
             log("✅ System & Log Cleared.", "00:00:00");
         })

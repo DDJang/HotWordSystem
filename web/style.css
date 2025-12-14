@@ -404,33 +404,6 @@ input:checked+.slider:before {
     animation: pulse-animation 2s infinite;
 }
 
-.config-feedback {
-    font-size: 13px;
-    color: #166534;
-    background-color: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    padding: 8px 12px;
-    border-radius: 6px;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    opacity: 0;
-    transition: opacity 0.5s ease;
-    height: 0;
-    overflow: hidden;
-    padding-top: 0;
-    padding-bottom: 0;
-    margin-bottom: 0;
-}
-
-.config-feedback.show {
-    opacity: 1;
-    height: auto;
-    padding-top: 8px;
-    padding-bottom: 8px;
-    margin-bottom: 15px;
-}
 
 .input-group {
     display: flex;
@@ -542,4 +515,12 @@ input:checked+.slider:before {
         transform: translateX(0);
         opacity: 0.95;
     }
+}
+
+/* 成功类型 (绿色) - 新增 */
+.notification-toast.is-success {
+    border-color: #10b981; /* emerald-500 */
+}
+.notification-toast.is-success h4 { 
+    color: #047857; /* emerald-700 */
 }
