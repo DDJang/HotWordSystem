@@ -747,45 +747,66 @@ input:checked+.slider:before {
 }
 
 /* 3. 修复文本框对齐 & 字体大小 & 间距 */
+/* 核心行布局 */
 .dual-input.compact {
-    justify-content: flex-start; /* 左对齐，不再两端对齐，消除过大间隙 */
-    gap: 8px;                    /* 统一控制元素间距 */
-    align-items: center;
-    height: 32px;                /* 固定高度，保证垂直对齐 */
+    display: flex;              /* 启用 Flex */
+    justify-content: center;    /* 【核心】水平居中：解决右侧空白问题 */
+    align-items: center;        /* 垂直居中 */
+    width: 100%;                /* 占满整行宽度 */
+    gap: 8px;                   /* 增加间距 (原5px -> 8px)，让内容更舒展 */
+    margin-bottom: 8px;         /* 行间距 */
+    box-sizing: border-box;     /* 防止 padding 撑大 */
 }
 
-/* 固定 Label 宽度，确保下方的输入框完美对齐 */
+/* 1. 标签：固定宽度 + 右对齐 */
 .dual-input.compact label {
-    width: 75px;        /* 固定宽度 (原来是自适应) */
-    flex: none;         /* 禁止伸缩 */
-    font-size: 14px;    /* 调大字体 (原来是12px) */
-    color: #374151;     /* 字体颜色加深 */
-    font-weight: 600;   /* 半粗体 */
-    text-align: left;
+    width: 70px;            /* 固定宽度，保证左侧对齐 */
+    flex: none;             /* 禁止缩放 */
+    font-size: 15px;
+    color: #374151;
+    font-weight: 600;
+    text-align: right;      /* 文字靠右，紧贴输入框 */
 }
 
-/* 迷你输入框样式 */
+/* 2. 输入框：统一尺寸 */
 .mini-input {
-    width: 80px !important; /*稍微加宽一点点*/
+    width: 80px !important;
     text-align: center;
     padding: 4px;
-    height: 28px;
+    height: 30px;           /* 稍微增高 */
+    font-family: 'Consolas', monospace;
+    font-size: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
     margin-bottom: 0 !important;
-    font-family: 'Consolas', monospace; /* 数字用等宽字体更好看 */
 }
 
+/* 3. 单位：固定宽度 */
 .unit {
     font-size: 13px;
     color: #6b7280;
-    width: 20px;
+    width: 16px;
+    text-align: center;
+    flex: none;
 }
 
+/* 4. 按钮：固定尺寸 */
 .btn-xs {
-    width: 48px !important;
+    width: 50px !important; /* 稍微加宽一点 */
     padding: 0 !important;
-    font-size: 12px;
-    height: 28px;
-    line-height: 28px; /* 垂直居中文字 */
+    font-size: 13px;
+    height: 30px;           /* 与输入框等高 */
+    line-height: 30px;
     margin-bottom: 0 !important;
     border-radius: 4px;
+    flex: none;             /* 禁止缩放 */
+}
+
+/* --- 数据模拟文本框样式 --- */
+#manualInput {
+    resize: none;       /* 【核心】禁止拖动调整大小 */
+    height: 34px;       /* 固定高度，与旁边的“发送”按钮对齐 */
+    line-height: 20px;  /* 调整文字行高 */
+    padding: 6px 10px;  /* 保持内边距 */
+    overflow-y: hidden; /* 隐藏垂直滚动条（单行输入时更美观） */
 }

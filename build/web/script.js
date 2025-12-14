@@ -521,17 +521,19 @@ function uploadFile(event) {
  * 弹出模态框显示配置详情
  */
 function showConfigInfo() {
-    // 1. 获取当前输入框的值（这里假设输入框的值就是当前生效的值，或者你可以从全局变量获取）
+    // 1. 获取当前输入框的值
     const win = document.getElementById('winSize').value;
     const ret = document.getElementById('retSize').value;
     const k = document.getElementById('displayK').value;
+    const trend = document.getElementById('trendThreshold').value;
 
     // 2. 填充到模态框
     document.getElementById('cfg_win').innerText = win + " s";
     document.getElementById('cfg_ret').innerText = ret + " s";
     document.getElementById('cfg_k').innerText = k;
+    document.getElementById('cfg_trend').innerText = trend;
 
-    // 3. 显示模态框 (添加 .show 类)
+    // 3. 显示模态框
     const modal = document.getElementById('configModal');
     modal.classList.add('show');
 }
