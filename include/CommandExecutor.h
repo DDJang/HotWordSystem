@@ -18,6 +18,7 @@ private:
     const std::regex timeRegex{R"(\[(\d{1,2}:\d{1,2}:\d{1,2})\]\s*(.*))"};
     const std::regex benchRegex{R"(\[ACTION\]\s*BENCHMARK\s*N=(\d+))"};
     const std::regex stopBenchRegex{R"(\[ACTION\]\s*BENCHMARK_STOP)"};
+    const std::regex statusBenchRegex{R"(\[ACTION\]\s*BENCHMARK_STATUS)"};
     const std::regex windowRegex{R"(\[ACTION\]\s*SET_WINDOW\s*S=(\d+))"};
     const std::regex historyRegex{R"(\[ACTION\]\s*HISTORY\s*START=(\d{1,2}:\d{1,2}:\d{1,2})\s*END=(\d{1,2}:\d{1,2}:\d{1,2})\s*STEP=(\d+))"};
     const std::regex resetRegex{R"(\[ACTION\]\s*RESET)"}; 
@@ -81,14 +82,27 @@ public:
             // 3. 指令: 压测
             else if (std::regex_search(line, match, benchRegex)) {
                 int n = GlobalUtils::safeStoi(match[1].str(), 1, 100000, 0);
-                ctx.abortBenchmark = false; 
-                std::thread([this, n](){ runBenchmark(n); }).detach();
-                finalOutput << "[Cmd] Benchmark started N=" << n << "\n";
+                if (n > 0) { // 【优化】只有当 N > 0 时才真正启动
+                    ctx.abortBenchmark = false; 
+                    std::thread([this, n](){ runBenchmark(n); }).detach();
+                    finalOutput << "[Cmd] Benchmark started N=" << n << "\n";
+                } else { // 当 N=0 时，等同于终止
+                    ctx.abortBenchmark = true;
+                    finalOutput << "[Cmd] Benchmark stop signal sent via N=0.\n";
+                }
             }
             // 【新增】指令：终止压测
             else if (std::regex_search(line, match, stopBenchRegex)) {
                 ctx.abortBenchmark = true;
                 finalOutput << "[Cmd] Benchmark stop signal sent.\n";
+            }
+            // 【新增】指令：查询压测状态
+            else if (std::regex_search(line, match, statusBenchRegex)) {
+                if (ctx.isBenchmarkRunning) {
+                    return R"({"is_running": true})"; // 直接返回JSON，不进入 finalOutput
+                } else {
+                    return R"({"is_running": false})"; // 直接返回JSON
+                }
             }
             // 4. 指令: 性能
             else if (line.find("[ACTION] STATS") != std::string::npos) {
@@ -106,6 +120,7 @@ public:
             // 6. 指令: 重置
             else if (std::regex_search(line, match, resetRegex)) {
                 ctx.abortBenchmark = true;
+                ctx.isBenchmarkRunning = false;
                 ctx.window->reset();
                 ctx.monitor->reset();
                 ctx.persistence->clearLog();
@@ -116,6 +131,7 @@ public:
             else if (std::regex_search(line, match, shutdownRegex)) {
                 ctx.shouldExit = true; // 1. 设置标志位
                 ctx.abortBenchmark = true;
+                ctx.isBenchmarkRunning = false;
                 finalOutput << "Shutdown initiated. Server will terminate shortly...\n";
 
                 // 2. 启动一个独立的倒计时线程，确保服务器最终会关闭
@@ -196,6 +212,8 @@ private:
     }
 
     void runBenchmark(int n) {
+        ctx.isBenchmarkRunning = true; 
+
         long long startTs = ctx.lastTimestamp; 
         ctx.monitor->reset();
         
@@ -203,6 +221,7 @@ private:
             // 紧急刹车检查
             if (ctx.abortBenchmark) {
                 std::cout << "[System] Benchmark aborted by user." << std::endl;
+                ctx.isBenchmarkRunning = false; // 【修改】在中止时也要设置回 false
                 return; // 直接退出线程
             }
 
@@ -230,5 +249,6 @@ private:
             // 锁在这里被释放，给其他线程机会
         }
         std::cout << "[System] Benchmark finished." << std::endl;
+        ctx.isBenchmarkRunning = false;
     }
 };

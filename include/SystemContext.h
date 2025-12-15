@@ -22,6 +22,7 @@ public:
     // 压测终止信号 flag
     // true 表示需要立即停止，false 表示正常运行
     std::atomic<bool> abortBenchmark{false}; 
+    std::atomic<bool> isBenchmarkRunning{false}; // 【新增】压测状态标记
 
     // 退出标志位
     std::atomic<bool> shouldExit{false}; 

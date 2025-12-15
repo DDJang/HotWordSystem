@@ -4,6 +4,7 @@ var feedbackTimer = null;
 var isHistoryMode = false;
 var wordToRemove = null; // 用于存储待删除的敏感词
 var historyWindowText = "";
+var benchmarkPollTimer = null; // 【新增】用于存放轮询定时器的ID
 
 var myChart = echarts.init(document.getElementById('mainChart'));
 myChart.setOption({
@@ -659,26 +660,75 @@ function genReport() {
 
 
 function runBench() {
+    // 【新增】如果已经在轮询，则阻止重复启动
+    if (benchmarkPollTimer) {
+        showNotification('操作无效', '已有压力测试正在运行或等待结果。', 'danger');
+        return;
+    }
+
     const n = validateNumber('benchN', 1, 100000, "Benchmark N");
     if (n !== null) {
-        // 先给一个提示，告诉用户开始了
-        showNotification('压力测试', `正在请求写入 ${n} 条数据...`, 'warning');
+        showNotification('压力测试', `已启动！正在注入 ${n} 条数据...`, 'warning');
 
-        // 发送请求，并等待结果
+        // 发送启动指令
         apiPost('/api/command', { cmd: `[ACTION] BENCHMARK N=${n}` })
             .then(() => {
-                // 【关键】这里是服务器处理完返回后执行的代码
-                // 延迟 500ms 弹窗，让人感觉有个处理过程，体验更好
-                setTimeout(() => {
-                    showNotification('压力测试完成', `成功！已向系统注入 ${n} 条模拟数据。`, 'success', 5000);
-                }, 500);
+                // 【核心修改】启动成功后，开始轮询，而不是直接显示完成
+                // 每隔 1.5 秒查询一次状态
+                benchmarkPollTimer = setInterval(checkBenchmarkStatus, 1500); 
             })
             .catch(() => {
-                // 如果出错了
                 showNotification('❌ 错误', '压力测试启动失败，请检查连接。', 'danger');
             });
     }
 }
+function stopBench() {
+    // 【修改】在发送指令的同时，清除定时器，防止弹出“已完成”的错误通知
+    if (benchmarkPollTimer) {
+        clearInterval(benchmarkPollTimer);
+        benchmarkPollTimer = null;
+    }
+    apiPost('/api/command', { cmd: `[ACTION] BENCHMARK_STOP` });
+    showNotification('压力测试', '已发送终止指令', 'warning', 3000);
+}
+function checkBenchmarkStatus() {
+    fetch('/api/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cmd: `[ACTION] BENCHMARK_STATUS` })
+    })
+    .then(res => res.json())
+    .then(data => {
+        // 后端报告测试已结束
+        if (!data.is_running) {
+            
+            // 【核心修正】增加“守门员”检查
+            // 只有当 benchmarkPollTimer 还存在时，才执行清理和通知。
+            // 这确保了只有第一个成功返回的请求能执行这段逻辑。
+            if (benchmarkPollTimer) {
+                // 1. 清理定时器
+                clearInterval(benchmarkPollTimer);
+                benchmarkPollTimer = null;
+
+                // 2. 弹出完成通知
+                showNotification('压力测试完成', `数据注入成功！`, 'success', 5000);
+            }
+            // 如果 benchmarkPollTimer 已经是 null，说明其他“兄弟”请求已经处理过了，
+            // 当前这个请求就什么也不用做，静默结束即可。
+        }
+    })
+    .catch(err => {
+        // 对于错误处理，同样增加守门员检查
+        if (benchmarkPollTimer) {
+            clearInterval(benchmarkPollTimer);
+            benchmarkPollTimer = null;
+            showNotification('查询失败', '无法获取压测状态，请检查连接。', 'danger');
+            console.error("Benchmark status check failed:", err);
+        }
+    });
+}
+
+
 
 function resetSystem() {
     const modal = document.getElementById('resetModal');
@@ -813,6 +863,12 @@ function closeResetModal(e) {
 }
 function executeReset() {
     closeResetModal(null);
+
+    if (benchmarkPollTimer) {
+        clearInterval(benchmarkPollTimer);
+        benchmarkPollTimer = null;
+    }
+
     document.getElementById('history-mode-overlay').classList.remove('show');
     log("Sending Reset...", "00:00:00");
 
@@ -914,15 +970,3 @@ function toggleHistoryMode() {
 
 
 
-/**
- * 终止压力测试
- */
-function stopBench() {
-    apiPost('/api/command', { cmd: `[ACTION] BENCHMARK_STOP` })
-        .then(() => {
-            showNotification('压力测试', '已成功发送终止指令。', 'warning', 3000);
-        })
-        .catch(() => {
-            showNotification('操作失败', '发送终止指令时出错，请检查连接。', 'danger');
-        });
-}

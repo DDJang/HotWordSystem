@@ -146,16 +146,25 @@ private:
             try {
                 auto j = json::parse(req.body);
                 std::string cmd = j["cmd"];
-                std::cout << "[Web Command] " << cmd << std::endl;
+                // 【优化】不再打印状态查询指令，避免刷屏
+                if (cmd.find("BENCHMARK_STATUS") == std::string::npos) {
+                    std::cout << "[Web Command] " << cmd << std::endl;
+                }
                 
                 std::string output = executor.process(cmd);
                 
-                json resp;
-                resp["status"] = "ok";
-                resp["message"] = output;
-                resp["timestamp"] = GlobalUtils::formatTime(ctx.lastTimestamp.load());
-
-                res.set_content(resp.dump(), "application/json");
+                // 【核心修改】检查 output 是否是 JSON
+                if (!output.empty() && output.front() == '{') {
+                    // 如果是 JSON (来自状态查询)，直接返回
+                    res.set_content(output, "application/json");
+                } else {
+                    // 否则，按原逻辑包装
+                    json resp;
+                    resp["status"] = "ok";
+                    resp["message"] = output;
+                    resp["timestamp"] = GlobalUtils::formatTime(ctx.lastTimestamp.load());
+                    res.set_content(resp.dump(), "application/json");
+                }
 
                 if (ctx.shouldExit) {
                     std::thread([&](){
