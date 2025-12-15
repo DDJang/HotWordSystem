@@ -968,3 +968,18 @@ function checkBenchmarkStatus() {
         }
     });
 }
+
+
+function showHistoryReportInfo() {
+    const title = '📂 历史报告说明';
+    const htmlContent = `
+        <p>当您点击 “导出历史报告” 按钮后，系统将在后台生成一份详细的文本报告。</p>
+        <p>报告的默认保存路径为：</p>
+        <div class="code-block">HotWordSystem\\build\\report_output.txt</div>
+        <div class="info-note">
+            <p style="margin:0;"><strong>💡 提示：</strong></p>
+            <p style="margin:0;">由于浏览器安全限制，程序无法直接为您打开本地文件。请手动复制上方路径，并在您的文件资源管理器中打开。</p>
+        </div>
+    `;
+    showInfoModal(title, htmlContent);
+}
