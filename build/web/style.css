@@ -4,22 +4,23 @@
     --card: #ffffff;
 }
 
+
 body {
     font-family: 'Segoe UI', sans-serif;
     
     /* 
-       【核心修改】高级极光渐变背景
-       1. 先设置一个基础背景色，作为底色。
+       【核心】高级极光渐变背景
+       1. 先设置一个冷色调的浅灰作为底色。
        2. 在底色之上，叠加多个大型、半透明的径向渐变，模拟多彩光晕。
     */
-    background-color: #f0f2f7; /* 一个更冷、更现代的浅灰色作为基底 */
+    background-color: #f0f2f7; /* 一个更现代的浅灰色基底 */
     background-image: 
-        /* 左上角的蓝色光晕 */
-        radial-gradient(circle at 15% 20%, rgba(59, 130, 246, 0.15), transparent 40%),
-        /* 右下角的紫色光晕 */
+        /* 左上角的蓝色光晕 (呼应按钮颜色) */
+        radial-gradient(circle at 15% 20%, rgba(59, 130, 246, 0.2), transparent 40%),
+        /* 右下角的紫色光晕 (呼应历史回放按钮) */
         radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.15), transparent 40%),
         /* 中间的微弱白色高光，增加层次感 */
-        radial-gradient(circle at 50% 50%, rgba(236, 248, 255, 0.2), transparent 40%);
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.3), transparent 50%);
 
     /* --- 以下为原有的布局样式，保持不变 --- */
     display: flex;
@@ -76,19 +77,20 @@ h3 {
 }
 
 
+
 .card,
 .control-group {
-    /* 1. 半透明的“玻璃”背景 */
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.4));
+    /* [优化] 1. 背景：让玻璃更“透”，能更好地反映背景色彩 */
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.3));
     
-    /* 2. 背景模糊效果 */
-    -webkit-backdrop-filter: blur(16px);
-    backdrop-filter: blur(16px);
+    /* [增强] 2. 模糊：增加模糊半径，让质感更强 */
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
     
-    /* 3. 增加一个微妙的边框来“勾勒”玻璃边缘 */
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    /* [优化] 3. 边框：用更亮的边框模拟玻璃边缘的高光 */
+    border: 1px solid rgba(255, 255, 255, 0.7);
 
-    /* 4. 调整阴影以适应“悬浮”感 */
+    /* 4. 阴影：保持悬浮感 */
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 
     /* --- 以下为原有的基础样式，保持不变 --- */
