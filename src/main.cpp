@@ -12,10 +12,10 @@
 #include "CommandExecutor.h"
 #include "APIServer.h"
 
-// 【新增】在这里包含 SlidingWindow.h，因为它在 SystemContext 的构造函数中需要
+// 在这里包含 SlidingWindow.h，因为它在 SystemContext 的构造函数中需要
 #include "SlidingWindow.h"
 
-// 【新增】SystemContext 构造函数和析构函数的实现
+// SystemContext 构造函数和析构函数的实现
 SystemContext::SystemContext() {
     // 路径配置
     const char* DICT_PATH = "dict/jieba.dict.utf8";
@@ -36,7 +36,7 @@ SystemContext::SystemContext() {
     monitor = std::make_unique<PerformanceMonitor>();
 }
 
-SystemContext::~SystemContext() = default; // 或者 {}
+SystemContext::~SystemContext() = default;
 
 int main() {
     #ifdef _WIN32

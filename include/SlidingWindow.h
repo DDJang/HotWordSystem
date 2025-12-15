@@ -12,7 +12,7 @@
 #include <mutex>
 #include <utility>
 
-#include "SystemContext.h" // <-- 包含头文件
+#include "SystemContext.h"
 
 class SlidingWindow {
 private:
@@ -33,7 +33,7 @@ private:
     // 实时词频统计 (对应 activeData)
     std::unordered_map<std::string, int> wordCounts;
 
-    // 【新增】持有 SystemContext 引用
+
     SystemContext& ctx;
 
     mutable std::mutex mtx;
@@ -44,7 +44,7 @@ private:
 
 
 public:
-    // 【修改】构造函数，接收 SystemContext 引用
+    // 构造函数，接收 SystemContext 引用
     SlidingWindow(long long windowSize, SystemContext& context) 
         : windowSizeSeconds(windowSize), ctx(context) {}
 
@@ -248,7 +248,7 @@ private:
             // 如果用户此时把窗口拉大到覆盖这些被删除的数据，会发现数据缺失（这是预期的牺牲）
             storage.erase(storage.begin());
 
-            // 【新增】设置容量超限标志
+            // 设置容量超限标志
             ctx.capacityLimitEvictionOccurred = true; 
         }
         
@@ -307,7 +307,7 @@ private:
         
         // map 是有序的，直接检查头部
         auto it = storage.begin();
-        // 【新增】一个flag，只要发生了一次删除，就设置
+        // 一个flag，只要发生了一次删除，就设置
         bool evicted = false; 
         while (it != storage.end()) {
             if (it->first <= physicalThreshold) {
@@ -318,7 +318,7 @@ private:
             }
         }
 
-        // 【新增】如果发生了驱逐，设置时间超限标志
+        // 如果发生了驱逐，设置时间超限标志
         if (evicted) {
             ctx.timeLimitEvictionOccurred = true;
         }

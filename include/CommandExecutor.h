@@ -8,7 +8,7 @@
 #include <chrono>
 #include "SystemContext.h"
 #include "GlobalUtils.h"
-#include "SlidingWindow.h" // 【新增】包含 SlidingWindow 的完整定义
+#include "SlidingWindow.h"
 
 class CommandExecutor {
 private:
@@ -79,7 +79,7 @@ public:
                 ctx.window->setWindowSize(s);
                 finalOutput << "[Cmd] Window set to " << s << "s\n";
             }
-            // 3. 指令: 压测
+            // 3. 指令: 压测相关
             else if (std::regex_search(line, match, benchRegex)) {
                 int n = GlobalUtils::safeStoi(match[1].str(), 1, 100000, 0);
                 if (n > 0) { // 【优化】只有当 N > 0 时才真正启动
@@ -91,12 +91,12 @@ public:
                     finalOutput << "[Cmd] Benchmark stop signal sent via N=0.\n";
                 }
             }
-            // 【新增】指令：终止压测
+            // 指令：终止压测
             else if (std::regex_search(line, match, stopBenchRegex)) {
                 ctx.abortBenchmark = true;
                 finalOutput << "[Cmd] Benchmark stop signal sent.\n";
             }
-            // 【新增】指令：查询压测状态
+            // 指令：查询压测状态
             else if (std::regex_search(line, match, statusBenchRegex)) {
                 if (ctx.isBenchmarkRunning) {
                     return R"({"is_running": true})"; // 直接返回JSON，不进入 finalOutput
@@ -221,7 +221,7 @@ private:
             // 紧急刹车检查
             if (ctx.abortBenchmark) {
                 std::cout << "[System] Benchmark aborted by user." << std::endl;
-                ctx.isBenchmarkRunning = false; // 【修改】在中止时也要设置回 false
+                ctx.isBenchmarkRunning = false;
                 return; // 直接退出线程
             }
 
@@ -232,7 +232,7 @@ private:
             {
                 std::lock_guard<std::mutex> lock(ctx.global_mutex);
 
-                // 【核心修复】检查 2: 锁内检查 (为了正确性)
+                // 检查 2: 锁内检查 (为了正确性)
                 // 如果在我们等待锁的时候，RESET 命令已经执行，那么我们必须在这里中止操作
                 if (ctx.abortBenchmark) {
                     return; // 直接跳出循环，不再写入这“最后一批”数据

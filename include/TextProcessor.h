@@ -43,7 +43,7 @@ public:
         // 定义允许的词性（默认配置）
         allowedTags = { "n", "ns", "nr", "nt", "nz", "v", "vn", "a", "eng" }; 
         allowAllTags = false;
-        allowAllSensitive = false; // 【新增】初始化 
+        allowAllSensitive = false; // 初始化 
     }
 
     // 设置词性配置
