@@ -59,13 +59,31 @@
             <!-- 新增：专门用于放置“标题和按钮”的顶部行 -->
             <div id="right-col-header-top-row">
                 <h2 style="margin: 0;">🎮 控制台</h2>
-                <div class="shutdown-btn-header" onclick="shutdownSystem()" title="终止程序">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
-                        <line x1="12" y1="2" x2="12" y2="12"></line>
-                    </svg>
+
+                <!-- [新增] 创建一个容器来包裹右侧的所有图标按钮 -->
+                <div class="header-icon-buttons">
+
+                    <!-- [新增] 这是新的“查看性能”按钮 -->
+                    <div class="stats-btn-header" onclick="showStats()" title="查看性能指标">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 12H2V20H4V12Z" />
+                            <path d="M12 8H10V20H12V8Z" />
+                            <path d="M20 4H18V20H20V4Z" />
+                        </svg>
+                    </div>
+
+                    <!-- 这是原来的“终止程序”按钮 -->
+                    <div class="shutdown-btn-header" onclick="shutdownSystem()" title="终止程序">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                            <line x1="12" y1="2" x2="12" y2="12"></line>
+                        </svg>
+                    </div>
+
                 </div>
+
             </div>
 
             <!-- 日志框保持不变 -->
@@ -235,20 +253,13 @@
             </div>
         </div>
 
-        <!-- 统计与报告 -->
-        <div class="control-group">
-            <h3>📊 统计与报告</h3>
-            <div class="row">
-                <button onclick="showStats()" class="success">查看性能指标</button>
-                <button onclick="genReport()" class="secondary">导出历史报告</button>
-            </div>
-        </div>
+
 
         <!-- 历史回放 -->
         <div class="control-group">
             <h3>📂 历史回放</h3>
 
-            
+
             <div class="row history-input-row">
                 <!-- 将“起始”和它的输入框包裹在一个 div 中 -->
                 <div class="history-input-group">
@@ -263,11 +274,12 @@
             </div>
 
 
+            <!-- [核心] 将两个按钮放在了同一个 .row 容器中 -->
             <div class="row" style="margin-top: 8px;">
-                <!-- 我们创建了一个新的、唯一的按钮，并赋予了它一个ID和新的点击事件 -->
-                <button id="historyToggleButton" onclick="toggleHistoryMode()" class="purple" style="width: 100%;">
+                <button id="historyToggleButton" onclick="toggleHistoryMode()" class="purple">
                     回放图表
                 </button>
+                <button onclick="genReport()" class="secondary">导出历史报告</button>
             </div>
         </div>
 

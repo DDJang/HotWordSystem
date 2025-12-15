@@ -1363,3 +1363,49 @@ textarea:focus {
     background: rgba(239, 68, 68, 1); /* 悬浮时更亮 */
     transform: scale(1.05);
 }
+
+
+
+
+/* ======================================================== */
+/* == 新增：美化 Header 区域的新图标按钮和按钮组 == */
+/* ======================================================== */
+/* 1. Icon 按钮的容器 */
+.header-icon-buttons {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* 设置图标按钮之间的间距 */
+}
+
+/* 2. 新的“性能”Icon 按钮样式 */
+.stats-btn-header {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    
+    /* [核心] 使用主题蓝色作为主色调 */
+    background-color: #eff6ff; 
+    color: #3b82f6; 
+    border: 1px solid #bfdbfe;
+}
+
+/* 3. “性能”Icon 按钮的悬浮效果 */
+.stats-btn-header:hover {
+    background-color: #3b82f6;
+    color: #ffffff;
+    transform: scale(1.1); /* 悬浮时放大 */
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+    border-color: #3b82f6;
+}
+
+/* 4. 确保所有 Icon 按钮内的 SVG 图标大小统一 */
+.stats-btn-header svg,
+.shutdown-btn-header svg {
+    width: 20px;
+    height: 20px;
+}
