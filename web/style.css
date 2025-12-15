@@ -481,7 +481,8 @@ th {
 .tag-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 12px;
+    justify-content: center; /* 新增此行以居中 */
 }
 
 /* 隐藏原生 checkbox */
@@ -490,20 +491,26 @@ th {
 }
 
 /* 自定义 Label 样式 */
+/* --- 1. “词性标签”的基础样式 (未选中状态) --- */
 .tag-chip {
+    /* [核心] 改为更清晰的浅灰色背景 */
     background: #e5e7eb;
+    border: 1px solid transparent; /* 移除边框，更简洁 */
     color: #374151;
-    padding: 5px 12px;
+    
+    /* [优化] 保持动效和柔和外观 */
+    transition: all 0.2s ease;
     border-radius: 16px;
+    padding: 5px 12px;
     font-size: 12px;
     cursor: pointer;
     user-select: none;
-    transition: all 0.2s;
-    border: 1px solid transparent;
 }
 
+/* --- 2. “词性标签”的悬浮效果 --- */
 .tag-chip:hover {
-    background: #d1d5db;
+    background: #d1d5db; /* 悬浮时变为深一点的灰色 */
+    transform: scale(1.03); /* 轻微放大 */
 }
 
 /* 选中状态 */

@@ -161,7 +161,6 @@
             </div>
         </div>
 
-        <!-- 过滤配置 (拆分标题版) -->
         <!-- === 第一部分：词性过滤配置 === -->
         <div class="control-group">
             <div class="header-row">
@@ -187,36 +186,35 @@
                 </div>
             </div>
 
-            <!-- 移除了原本的 toggle-row，现在通过 CSS 透明度控制禁用状态 -->
             <div id="posConfigArea" class="config-section">
-                <div class="tag-section-title">名词类</div>
+                <!-- 第一行标签 -->
                 <div class="tag-container">
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="n"
-                            onchange="updateConfig()"><span class="tag-chip">名 (n)</span></label>
+                            onchange="updateConfig()"><span class="tag-chip">名词</span></label>
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="nr"
-                            onchange="updateConfig()"><span class="tag-chip">人名 (nr)</span></label>
+                            onchange="updateConfig()"><span class="tag-chip">人名</span></label>
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="nz"
-                            onchange="updateConfig()"><span class="tag-chip">其他专名 (nz)</span></label>
+                            onchange="updateConfig()"><span class="tag-chip">其他专名</span></label>
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="ns"
-                            onchange="updateConfig()"><span class="tag-chip">地名 (ns)</span></label>
+                            onchange="updateConfig()"><span class="tag-chip">地名</span></label>
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="nt"
-                            onchange="updateConfig()"><span class="tag-chip">机构 (nt)</span></label>
+                            onchange="updateConfig()"><span class="tag-chip">机构</span></label>
                 </div>
-
-                <div class="tag-section-title" style="margin-top: 8px;">动/形/其他</div>
-                <div class="tag-container">
+                <!-- 第二行标签 -->
+                <div class="tag-container" style="margin-top: 12px;">
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="v"
-                            onchange="updateConfig()"><span class="tag-chip">动 (v)</span></label>
+                            onchange="updateConfig()"><span class="tag-chip">动词</span></label>
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="vn"
-                            onchange="updateConfig()"><span class="tag-chip">名动 (vn)</span></label>
+                            onchange="updateConfig()"><span class="tag-chip">名动词</span></label>
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="a"
-                            onchange="updateConfig()"><span class="tag-chip">形 (a)</span></label>
+                            onchange="updateConfig()"><span class="tag-chip">形容词</span></label>
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="eng"
-                            onchange="updateConfig()"><span class="tag-chip">英文 (eng)</span></label>
+                            onchange="updateConfig()"><span class="tag-chip">英文</span></label>
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="i"
-                            onchange="updateConfig()"><span class="tag-chip">成语 (i)</span></label>
+                            onchange="updateConfig()"><span class="tag-chip">成语</span></label>
                 </div>
             </div>
+            
         </div>
 
         <!-- === 第二部分：敏感词过滤配置 === -->
