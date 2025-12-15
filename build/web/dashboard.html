@@ -53,17 +53,11 @@
 
     <div class="right-col">
 
-
+        <!-- 这是您原来的 Header，保持不变 -->
         <div id="right-col-header">
-
-            <!-- 新增：专门用于放置“标题和按钮”的顶部行 -->
             <div id="right-col-header-top-row">
                 <h2 style="margin: 0;">🎮 控制台</h2>
-
-                <!-- [新增] 创建一个容器来包裹右侧的所有图标按钮 -->
                 <div class="header-icon-buttons">
-
-                    <!-- [新增] 这是新的“查看性能”按钮 -->
                     <div class="stats-btn-header" onclick="showStats()" title="查看性能指标">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -72,8 +66,6 @@
                             <path d="M20 4H18V20H20V4Z" />
                         </svg>
                     </div>
-
-                    <!-- 【移动过来】清空数据按钮 -->
                     <div class="reset-btn-header" onclick="resetSystem()" title="清空所有数据">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -81,8 +73,6 @@
                             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                         </svg>
                     </div>
-
-                    <!-- 这是原来的“终止程序”按钮 -->
                     <div class="shutdown-btn-header" onclick="shutdownSystem()" title="终止程序">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -90,77 +80,25 @@
                             <line x1="12" y1="2" x2="12" y2="12"></line>
                         </svg>
                     </div>
-
                 </div>
-
             </div>
-
-            <!-- 日志框保持不变 -->
             <div>
                 <div id="log">Connecting to server...</div>
             </div>
-
         </div>
 
 
-        <!-- 视图设置 (完美居中版) -->
-        <div class="control-group">
-            <div class="header-row">
-                <h3>⏳ 视图设置</h3>
-                <div class="info-trigger" onclick="showConfigInfo()" title="查看配置详情">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
-                </div>
-            </div>
+        <!-- ============================================= -->
+        <!-- ========= 从这里开始是重新排序的模块 ========= -->
+        <!-- ============================================= -->
 
-            <!-- 1. 窗口大小 (带按钮) -->
-            <div class="dual-input compact">
-                <label>窗口大小</label>
-                <input type="number" id="winSize" class="mini-input" value="600" min="1" max="2592000">
-                <span class="unit">秒</span>
-                <button onclick="updateWindowSize()" class="btn-xs">应用</button>
-            </div>
-
-            <!-- 2. 存储上限 (带按钮) -->
-            <div class="dual-input compact">
-                <label>存储上限</label>
-                <input type="number" id="retSize" class="mini-input" value="6000" min="600" max="2592000">
-                <span class="unit">秒</span>
-                <button onclick="updateRetention()" class="btn-xs">应用</button>
-            </div>
-
-            <!-- 3. 趋势阈值 (无按钮，需占位符) -->
-            <div class="dual-input compact">
-                <label>趋势阈值</label>
-                <input type="number" id="trendThreshold" class="mini-input" value="2" min="0" step="0.1">
-                <span class="unit">分</span>
-                <!-- 【关键】占位符：宽度 50px (等于按钮宽度) -->
-                <div style="width: 50px;"></div>
-            </div>
-
-            <!-- 4. 显示数量 (无按钮，需占位符) -->
-            <div class="dual-input compact">
-                <label>显示数量</label>
-                <input type="number" id="displayK" class="mini-input" value="10" min="1" max="100">
-                <span class="unit">个</span>
-                <!-- 【关键】占位符：宽度 50px (等于按钮宽度) -->
-                <div style="width: 50px;"></div>
-            </div>
-        </div>
-
-        <!-- 数据模拟 -->
+        <!-- 1. 数据模拟 (Input) -->
         <div class="control-group">
             <h3>📝 数据模拟</h3>
             <div class="row input-group-interactive">
                 <textarea id="manualInput" rows="1" placeholder="输入内容..."></textarea>
                 <button onclick="sendManualData()">发送</button>
             </div>
-
-            <!-- 【新增】文件上传部分 -->
             <div class="row" style="margin-top: 8px;">
                 <input type="file" id="fileUploader" style="display: none;" onchange="uploadFile(event)">
                 <button onclick="document.getElementById('fileUploader').click()" class="secondary"
@@ -170,21 +108,17 @@
             </div>
         </div>
 
-        <!-- === 第一部分：词性过滤配置 === -->
+        <!-- 2. 词性过滤 (Processing Rule) -->
         <div class="control-group">
             <div class="header-row">
                 <h3>🏷️ 词性过滤</h3>
-
-                <!-- 标题栏开关 -->
                 <div class="header-toggle-group">
                     <span class="toggle-label-sm">启用过滤</span>
                     <label class="switch sm">
-                        <!-- 注意：勾选代表“不保留所有”即“启用过滤” -->
                         <input type="checkbox" id="cb_filter_pos_enable" onchange="togglePosFilter(this)">
                         <span class="slider round"></span>
                     </label>
                 </div>
-
                 <div class="info-trigger" onclick="showPosInfo()" title="查看说明">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
                         stroke-linejoin="round">
@@ -194,9 +128,7 @@
                     </svg>
                 </div>
             </div>
-
             <div id="posConfigArea" class="config-section">
-                <!-- 第一行标签 -->
                 <div class="tag-container">
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="n"
                             onchange="updateConfig()"><span class="tag-chip">名词</span></label>
@@ -209,7 +141,6 @@
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="nt"
                             onchange="updateConfig()"><span class="tag-chip">机构</span></label>
                 </div>
-                <!-- 第二行标签 -->
                 <div class="tag-container" style="margin-top: 12px;">
                     <label><input type="checkbox" class="tag-chip-input pos-item" value="v"
                             onchange="updateConfig()"><span class="tag-chip">动词</span></label>
@@ -223,24 +154,19 @@
                             onchange="updateConfig()"><span class="tag-chip">成语</span></label>
                 </div>
             </div>
-
         </div>
 
-        <!-- === 第二部分：敏感词过滤配置 === -->
+        <!-- 3. 敏感词过滤 (Processing Rule) -->
         <div class="control-group">
             <div class="header-row">
                 <h3>🛡️ 敏感词过滤</h3>
-
-                <!-- 标题栏开关 -->
                 <div class="header-toggle-group">
                     <span class="toggle-label-sm">启用过滤</span>
                     <label class="switch sm">
-                        <!-- 注意：勾选代表“不保留所有敏感词”即“启用过滤” -->
                         <input type="checkbox" id="cb_filter_sensitive_enable" onchange="toggleSensitiveFilter(this)">
                         <span class="slider round"></span>
                     </label>
                 </div>
-
                 <div class="info-trigger" onclick="showSensitiveInfo()" title="查看说明">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
                         stroke-linejoin="round">
@@ -250,7 +176,6 @@
                     </svg>
                 </div>
             </div>
-
             <div id="sensitiveConfigArea" class="config-section">
                 <div class="row input-group-interactive">
                     <input type="text" id="newSensitive" placeholder="添加屏蔽词...">
@@ -260,11 +185,47 @@
             </div>
         </div>
 
-
-
-        <!-- 历史回放 -->
+        <!-- 4. 视图设置 (Real-time View) -->
         <div class="control-group">
-            
+            <div class="header-row">
+                <h3>⏳ 视图设置</h3>
+                <div class="info-trigger" onclick="showConfigInfo()" title="查看配置详情">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                </div>
+            </div>
+            <div class="dual-input compact">
+                <label>窗口大小</label>
+                <input type="number" id="winSize" class="mini-input" value="600" min="1" max="2592000">
+                <span class="unit">秒</span>
+                <button onclick="updateWindowSize()" class="btn-xs">应用</button>
+            </div>
+            <div class="dual-input compact">
+                <label>存储上限</label>
+                <input type="number" id="retSize" class="mini-input" value="6000" min="600" max="2592000">
+                <span class="unit">秒</span>
+                <button onclick="updateRetention()" class="btn-xs">应用</button>
+            </div>
+            <div class="dual-input compact">
+                <label>趋势阈值</label>
+                <input type="number" id="trendThreshold" class="mini-input" value="2" min="0" step="0.1">
+                <span class="unit">分</span>
+                <div style="width: 50px;"></div>
+            </div>
+            <div class="dual-input compact">
+                <label>显示数量</label>
+                <input type="number" id="displayK" class="mini-input" value="10" min="1" max="100">
+                <span class="unit">个</span>
+                <div style="width: 50px;"></div>
+            </div>
+        </div>
+
+        <!-- 5. 历史回放 (History & Analysis) -->
+        <div class="control-group">
             <div class="header-row">
                 <h3>📂 历史回放</h3>
                 <div class="info-trigger" onclick="showHistoryReportInfo()" title="查看说明">
@@ -276,23 +237,16 @@
                     </svg>
                 </div>
             </div>
-
-
             <div class="row history-input-row">
-                <!-- 将“起始”和它的输入框包裹在一个 div 中 -->
                 <div class="history-input-group">
                     <span>起始</span>
                     <input type="text" id="histStart" value="00:00:00" placeholder="HH:MM:SS" maxlength="8">
                 </div>
-                <!-- 将“终止”和它的输入框包裹在另一个 div 中 -->
                 <div class="history-input-group">
                     <span>终止</span>
                     <input type="text" id="histEnd" value="00:10:00" placeholder="HH:MM:SS" maxlength="8">
                 </div>
             </div>
-
-
-            <!-- [核心] 将两个按钮放在了同一个 .row 容器中 -->
             <div class="row" style="margin-top: 8px;">
                 <button id="historyToggleButton" onclick="toggleHistoryMode()" class="purple">
                     回放图表
@@ -301,21 +255,19 @@
             </div>
         </div>
 
-        <!-- 【修改后】压力测试 -->
+        <!-- 6. 压力测试 (System Tool) -->
         <div class="control-group">
             <h3>⚡ 压力测试</h3>
             <div class="dual-input compact">
                 <label style="width: 110px;">数据量</label>
                 <input type="number" id="benchN" class="mini-input" value="1000" min="1" max="100000">
                 <span class="unit">条</span>
-                <!-- 占位符，用于对齐 -->
                 <div style="width: 50px;"></div>
             </div>
             <div class="row" style="margin-top: 12px;">
                 <button id="benchmarkToggleButton" onclick="toggleBenchmarkMode()">启动测试</button>
             </div>
         </div>
-
 
     </div>
 
