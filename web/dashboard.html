@@ -247,16 +247,21 @@
         <!-- 历史回放 -->
         <div class="control-group">
             <h3>📂 历史回放</h3>
-            <!-- 修改：增加了 label 标签和对齐样式 -->
-            <div class="row" style="align-items: center; gap: 8px;">
-                <span style="font-size: 12px; color: #6b7280; white-space: nowrap;">起始</span>
-                <input type="text" id="histStart" value="00:00:00" placeholder="HH:MM:SS" maxlength="8"
-                    style="margin-bottom: 0;">
 
-                <span style="font-size: 12px; color: #6b7280; white-space: nowrap;">终止</span>
-                <input type="text" id="histEnd" value="00:10:00" placeholder="HH:MM:SS" maxlength="8"
-                    style="margin-bottom: 0;">
+            
+            <div class="row history-input-row">
+                <!-- 将“起始”和它的输入框包裹在一个 div 中 -->
+                <div class="history-input-group">
+                    <span>起始</span>
+                    <input type="text" id="histStart" value="00:00:00" placeholder="HH:MM:SS" maxlength="8">
+                </div>
+                <!-- 将“终止”和它的输入框包裹在另一个 div 中 -->
+                <div class="history-input-group">
+                    <span>终止</span>
+                    <input type="text" id="histEnd" value="00:10:00" placeholder="HH:MM:SS" maxlength="8">
+                </div>
             </div>
+
 
             <div class="row" style="margin-top: 8px;">
                 <!-- 我们创建了一个新的、唯一的按钮，并赋予了它一个ID和新的点击事件 -->
