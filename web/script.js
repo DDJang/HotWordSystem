@@ -1,3 +1,5 @@
+var currentWindowSize = document.getElementById('winSize').value;
+var currentRetentionSize = document.getElementById('retSize').value;
 var feedbackTimer = null;
 var isHistoryMode = false;
 var wordToRemove = null; // 用于存储待删除的敏感词
@@ -123,35 +125,46 @@ function showNotification(title, message, type = 'warning', duration = 5000) {
     }
 }
 
+
 function fetchAndUpdateRealtimeChart() {
     let k = document.getElementById('displayK').value || 10;
     fetch('/api/data?k=' + k)
         .then(res => res.json())
         .then(data => {
+            // 1. 处理系统关闭情况
             if (data.shutdown) {
                 clearInterval(mainInterval);
                 document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
                 return;
             }
 
-
-            // 【新增】检查驱逐标志并显示通知
-            // 危险警告优先
+            // 2. 处理通知
             if (data.capacity_limit_evicted) {
-                showNotification(
-                    '内存警告',
-                    '系统内存占用已达上限！为保证稳定性，部分最老的数据已被强制清除，这些数据将无法回溯。',
-                    'danger',
-                    10000 // 危险警告显示更久
-                );
+                showNotification('内存警告', '系统内存占用已达上限！为保证稳定性，部分最老的数据已被强制清除。', 'danger', 10000);
             } else if (data.time_limit_evicted) {
-                showNotification(
-                    '数据清理提示',
-                    '部分历史数据因超出设置的最大保留时间(“Storage”)，已被常规清除，这部分数据将无法回溯。',
-                    'warning'
-                );
+                showNotification('数据清理提示', '部分历史数据因超出设置的最大保留时间，已被常规清除。', 'warning');
             }
 
+            // 3. 【核心修复】安全地更新全局状态
+            // 只有当服务器返回有效值时，才更新用于 Info 弹窗的全局变量
+            if (data.window_sec !== undefined) {
+                currentWindowSize = data.window_sec; 
+                // 【关键】只有在首次加载时，才去修改输入框的值！
+                // 之后无论服务器返回什么，都不要动输入框，防止打断用户打字
+                if (isInitialLoad) {
+                    document.getElementById('winSize').value = data.window_sec;
+                }
+            }
+            
+            if (data.retention_sec !== undefined) {
+                currentRetentionSize = data.retention_sec;
+                // 【关键】同上，只在首次加载时修改输入框
+                if (isInitialLoad) {
+                    document.getElementById('retSize').value = data.retention_sec;
+                }
+            }
+
+            // 4. 更新图表
             if (!isHistoryMode) {
                 const seriesData = data.values.map((value, index) => ({
                     value: value,
@@ -164,6 +177,7 @@ function fetchAndUpdateRealtimeChart() {
                 });
             }
 
+            // 5. 更新文本信息
             currentBackendTimestamp = data.current_ts;
             if (!isHistoryMode) {
                 document.getElementById('windowInfo').innerText =
@@ -173,10 +187,9 @@ function fetchAndUpdateRealtimeChart() {
                     `${historyWindowText} | Now: ${data.current_ts}`;
             }
 
-            document.getElementById('retentionInfo').innerText = `Retention: ${data.retention_sec} s`;
-
+            // 6. 关闭首次加载标志
             if (isInitialLoad) {
-                log("✅ System Ready & Connected", currentBackendTimestamp);
+                log("✅ System Ready & Connected", data.current_ts);
                 isInitialLoad = false;
             }
         });
@@ -429,6 +442,7 @@ function log(msg, customTime = null) {
 function updateWindowSize() {
     const s = validateNumber('winSize', 1, 2592000, "Window Size");
     if (s !== null) {
+        currentWindowSize = s; 
         apiPost('/api/command', { cmd: `[ACTION] SET_WINDOW S=${s}` });
         showNotification('视图设置', `窗口大小已更新为 ${s} 秒`, 'success');
     }
@@ -462,6 +476,7 @@ function updateRetention() {
     const r = validateNumber('retSize', effectiveMin, retMaxHardcoded, "Retention");
 
     if (r !== null) {
+        currentRetentionSize = r;
         apiPost('/api/command', { cmd: `[ACTION] SET_RETENTION R=${r}` });
         showNotification('存储设置', `数据保留时间已更新为 ${r} 秒`, 'success');
     }
@@ -680,8 +695,9 @@ function uploadFile(event) {
  */
 function showConfigInfo() {
     // 1. 获取当前输入框的值
-    const win = document.getElementById('winSize').value;
-    const ret = document.getElementById('retSize').value;
+    // 【核心修改-2】不再从输入框读取，而是从我们存储的全局变量读取
+    const win = currentWindowSize;
+    const ret = currentRetentionSize;
     const k = document.getElementById('displayK').value;
     const trend = document.getElementById('trendThreshold').value;
 
