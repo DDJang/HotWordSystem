@@ -538,28 +538,33 @@ function removeSensitive(w) {
     modal.classList.add('show');
 }
 
+
 function viewHistory() {
+    // 1. 数据验证 (保持不变)
     const s = validateTime('histStart');
     const e = validateTime('histEnd');
     if (!s || !e) return;
 
     const k = document.getElementById('displayK').value || 10;
+    
+    // 2. 【核心修正】立即更新 UI 和全局状态，提供即时反馈
+    isHistoryMode = true; // 更新状态
+    const toggleButton = document.getElementById('historyToggleButton');
+    toggleButton.textContent = '返回实时'; // 改变文字
+    toggleButton.classList.remove('purple');  // 变为默认蓝色
+    toggleButton.classList.add('btn-pulse');  // 添加脉冲动画
 
-    isHistoryMode = true;
-    historyWindowText = `MODE: HISTORY [${s} ~ ${e}]`;
-    document.getElementById('windowInfo').innerText =
-        `${historyWindowText} | Now: ${currentBackendTimestamp}`;
-
-    log(`Loading History...`, currentBackendTimestamp);
-
-    document.getElementById('btnBackRealtime').classList.add('btn-pulse');
     document.getElementById('history-mode-overlay').classList.add('show');
-
+    historyWindowText = `MODE: HISTORY [${s} ~ ${e}]`;
+    document.getElementById('windowInfo').innerText = `${historyWindowText} | Now: ${currentBackendTimestamp}`;
+    log(`Loading History...`, currentBackendTimestamp);
     showNotification('历史回放', `已进入回放模式 [${s} ~ ${e}]，实时更新暂停`, 'warning', 4000);
 
+    // 3. 发送网络请求，只在成功后更新图表数据
     fetch(`/api/history_view?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}&k=${k}`)
         .then(r => r.json())
         .then(d => {
+            // 这里只保留对图表数据的更新
             const historySeriesData = d.values.map((value, index) => ({
                 value: value,
                 id: d.categories[index]
@@ -571,44 +576,51 @@ function viewHistory() {
                     data: historySeriesData,
                     itemStyle: {
                         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                            { offset: 0, color: 'rgba(168, 85, 247, 1)' }, // 顶部：亮紫色
-                            { offset: 1, color: 'rgba(139, 92, 246, 0.6)' }  // 底部：半透明深紫
-                        ]),
-                        shadowColor: 'rgba(0, 0, 0, 0.2)',
-                        shadowBlur: 10,
-                        shadowOffsetY: 5
+                            { offset: 0, color: 'rgba(168, 85, 247, 1)' },
+                            { offset: 1, color: 'rgba(139, 92, 246, 0.6)' }
+                        ])
                     }
                 }],
                 grid: {
                     top: 80
                 }
             });
+        })
+        .catch(error => {
+            // [新增] 错误处理，让调试更方便
+            console.error('Failed to fetch history data:', error);
+            log("❌ Error loading history.", currentBackendTimestamp);
+            showNotification('加载失败', '无法获取历史数据，请检查连接或时间范围。', 'danger');
         });
 }
 
+
 function backToRealtime() {
+    // 1. 【核心修正】立即更新 UI 和全局状态
     isHistoryMode = false;
-    log("Back to Realtime.", currentBackendTimestamp);
-    document.getElementById('btnBackRealtime').classList.remove('btn-pulse');
+    const toggleButton = document.getElementById('historyToggleButton');
+    toggleButton.textContent = '回放图表'; // 恢复文字
+    toggleButton.classList.add('purple');     // 恢复紫色
+    toggleButton.classList.remove('btn-pulse'); // 移除脉冲
+
     document.getElementById('history-mode-overlay').classList.remove('show');
+    log("Back to Realtime.", currentBackendTimestamp);
+    showNotification('实时监控', '已退出回放模式，恢复实时数据流', 'success');
+
+    // 2. 恢复图表样式
     myChart.setOption({
         series: [{
             itemStyle: {
                 color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                     { offset: 0, color: 'rgba(59, 130, 246, 1)' },
-                    { offset: 1, color: 'rgba(37, 99, 235, 0.7)' }   // -> 底部：更深、半透明的纯蓝色
-                ]),
-                borderRadius: 10,
-                shadowColor: 'rgba(0, 0, 0, 0.2)',
-                shadowBlur: 10,
-                shadowOffsetY: 5
+                    { offset: 1, color: 'rgba(37, 99, 235, 0.7)' }
+                ])
             }
         }],
         grid: { top: '10%' }
     });
 
-    showNotification('实时监控', '已退出回放模式，恢复实时数据流', 'success');
-
+    // 3. 获取并更新实时数据
     fetchAndUpdateRealtimeChart();
 }
 
@@ -800,10 +812,7 @@ function closeResetModal(e) {
     }
 }
 function executeReset() {
-    // 1. 关闭弹窗
     closeResetModal(null);
-
-    // 2. 执行旧的清空逻辑
     document.getElementById('history-mode-overlay').classList.remove('show');
     log("Sending Reset...", "00:00:00");
 
@@ -822,7 +831,16 @@ function executeReset() {
             });
             document.getElementById('trendBody').innerHTML = "";
             document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
-            document.getElementById('btnBackRealtime').classList.remove('btn-pulse');
+            
+            // === 【核心修正】 ===
+            // 1. 获取正确的、合并后的新按钮
+            const toggleButton = document.getElementById('historyToggleButton');
+            
+            // 2. 彻底重置按钮的所有状态，恢复到初始样貌
+            toggleButton.textContent = '回放图表';
+            toggleButton.classList.add('purple');
+            toggleButton.classList.remove('btn-pulse');
+            
             document.getElementById('history-mode-overlay').classList.remove('show');
             log("✅ System & Log Cleared.", "00:00:00");
             showNotification('系统重置', '内存数据及日志文件已全部清空', 'danger', 6000);
@@ -880,4 +898,16 @@ function executeRemoveSensitive() {
 
     // 3. 关闭弹窗
     closeRemoveSensitiveModal(null);
+}
+
+
+function toggleHistoryMode() {
+    // isHistoryMode 是您已有的全局变量，我们用它来判断当前状态
+    if (isHistoryMode) {
+        // 如果当前是历史模式，就执行“返回实时”的逻辑
+        backToRealtime();
+    } else {
+        // 否则，就执行“进入历史模式”的逻辑
+        viewHistory();
+    }
 }

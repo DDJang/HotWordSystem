@@ -259,8 +259,10 @@
             </div>
 
             <div class="row" style="margin-top: 8px;">
-                <button onclick="viewHistory()" class="purple">回放图表</button>
-                <button id="btnBackRealtime" onclick="backToRealtime()">返回实时</button>
+                <!-- 我们创建了一个新的、唯一的按钮，并赋予了它一个ID和新的点击事件 -->
+                <button id="historyToggleButton" onclick="toggleHistoryMode()" class="purple" style="width: 100%;">
+                    回放图表
+                </button>
             </div>
         </div>
 
