@@ -1301,3 +1301,65 @@ textarea:focus {
     background: rgba(255, 255, 255, 0.6);
     box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
+
+
+
+/* ======================================================= */
+/* == 新增：终极美化“标签(Tag)”UI，融入液态玻璃风格 == */
+/* ======================================================= */
+
+/* --- 1. “词性标签”的基础样式 (未选中状态) --- */
+.tag-chip {
+    /* [核心] 融入玻璃质感 */
+    background: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+    color: #374151; /* 保持深色文字以确保可读性 */
+    
+    /* [优化] 增加动效和更柔和的外观 */
+    transition: all 0.2s ease;
+    border-radius: 16px;
+    padding: 5px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* --- 2. “词性标签”的悬浮效果 --- */
+.tag-chip:hover {
+    background: rgba(255, 255, 255, 0.6);
+    transform: scale(1.03); /* 轻微放大 */
+}
+
+/* --- 3. “词性标签”的选中状态 (高亮) --- */
+.tag-chip-input:checked + .tag-chip {
+    background: rgba(59, 130, 246, 0.85); /* 使用主题蓝色，半透明 */
+    color: white;
+    border-color: rgba(59, 130, 246, 0.5);
+    
+    /* [核心] 营造“发光”和“浮起”的效果 */
+    box-shadow: 0 3px 12px -2px rgba(59, 130, 246, 0.5);
+    transform: scale(1.05) translateY(-1px);
+    font-weight: bold;
+}
+.tag-chip-input:checked + .tag-chip:hover {
+    background: rgba(59, 130, 246, 1); /* 悬浮时更亮 */
+}
+
+
+/* --- 4. 【关键】单独美化“敏感词标签” --- */
+/* 使用更强的选择器来覆盖 JS 添加的内联样式 */
+#sensitiveList .tag-chip {
+    background: rgba(239, 68, 68, 0.85); /* 使用危险红色，半透明 */
+    color: white;
+    border-color: rgba(239, 68, 68, 0.5);
+    
+    /* [核心] 营造“发光”和“浮起”的效果 */
+    box-shadow: 0 3px 12px -2px rgba(239, 68, 68, 0.5);
+    transform: scale(1.02);
+    font-weight: normal; /* 敏感词不需要加粗 */
+}
+#sensitiveList .tag-chip:hover {
+    background: rgba(239, 68, 68, 1); /* 悬浮时更亮 */
+    transform: scale(1.05);
+}
