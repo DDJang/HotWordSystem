@@ -71,13 +71,14 @@ HotWordSystem/
 │   ├── SystemContext.h     # 全局上下文，管理模块实例与全局状态
 │   └── TextProcessor.h     # 分词、过滤与文本清洗引擎
 ├── src/
+│   ├── SystemContext.cpp   # 全局上下文，管理模块实例与全局状态
 │   └── main.cpp            # 程序入口与线程管理
 ├── web/                    # 前端资源目录 (HTML/CSS/JS 分离)
 │   ├── dashboard.html      # 主页面结构
 │   ├── style.css           # 样式表 (Glassmorphism 风格)
 │   └── script.js           # 前端交互逻辑
 ├── test/                   # 单元测试
-│   ├── unittest/           # GTest 或自定义测试代码
+│   ├── unittest/           # 单元测试代码
 │   └── testdata/           # 测试用例数据
 ├── scripts/                # 辅助脚本
 │   ├── client.py           # Python 数据投递客户端
