@@ -146,6 +146,16 @@ function showNotification(title, message, type = 'warning', duration = 5000) {
 
 function fetchAndUpdateRealtimeChart() {
     let k = document.getElementById('displayK').value || 10;
+    const overlay = document.getElementById('chart-state-overlay');
+    const overlayText = overlay.querySelector('p');
+
+    // 在 fetch 开始前，如果是首次加载，显示“加载中”
+    if (isInitialLoad) {
+        overlay.classList.remove('no-data');
+        overlay.classList.add('show');
+        overlayText.textContent = '正在连接服务器...';
+    }
+
     fetch('/api/data?k=' + k)
         .then(res => res.json())
         .then(data => {
@@ -210,6 +220,38 @@ function fetchAndUpdateRealtimeChart() {
                 log("✅ System Ready & Connected", data.current_ts);
                 isInitialLoad = false;
             }
+
+            // 7. 根据返回的数据决定显示内容
+            if (data.categories && data.categories.length > 0) {
+                // 如果有数据，隐藏遮罩层
+                overlay.classList.remove('show');
+
+                if (!isHistoryMode) {
+                    const seriesData = data.values.map((value, index) => ({
+                        value: value,
+                        id: data.categories[index]
+                    }));
+
+                    myChart.setOption({
+                        xAxis: { data: data.categories },
+                        series: [{ data: seriesData }]
+                    });
+                }
+            } else {
+                // 如果没有数据，显示“无数据”状态
+                overlay.classList.add('show', 'no-data');
+                overlayText.innerHTML = '📂<br>暂无数据';
+                // 清空图表
+                myChart.setOption({
+                    xAxis: { data: [] },
+                    series: [{ data: [] }]
+                });
+            }
+        }).catch(error => {
+            // 【新增】处理网络错误
+            console.error("Fetch error:", error);
+            overlay.classList.add('show', 'no-data');
+            overlayText.innerHTML = '❌<br>连接失败，请检查服务是否运行。';
         });
 }
 
@@ -378,60 +420,39 @@ loadConfigState();
 
 function renderTrends(list) {
     const tbody = document.getElementById('trendBody');
+    const trendOverlay = document.getElementById('trend-state-overlay'); // 获取新的遮罩层
     const threshold = parseFloat(document.getElementById('trendThreshold').value) || 0;
-    tbody.innerHTML = "";
+
+    // 【核心逻辑】根据列表是否为空来显示/隐藏遮罩层
+    if (!list || list.length === 0) {
+        trendOverlay.classList.add('show');
+        tbody.innerHTML = ""; // 确保表格为空
+        return; // 提前结束函数
+    } else {
+        trendOverlay.classList.remove('show');
+    }
+
+    tbody.innerHTML = ""; // 清空旧数据
     let rank = 1;
 
-    // 【新增】第一步：找出所有正分中的最高分，用于后续计算百分比
-    // 如果没有正分，默认 maxScore 为 1，防止除以零
     const positiveScores = list.map(item => item.score).filter(score => score > 0);
     const maxScore = positiveScores.length > 0 ? Math.max(...positiveScores) : 1;
 
     list.forEach(item => {
-        // 过滤掉低于阈值的数据
         if (Math.abs(item.score) < threshold) return;
-
         const tr = document.createElement('tr');
-
-        // 【核心修改】区分处理上升趋势和下降趋势
         if (item.score > 0) {
-            // --- 这是上升趋势的动态样式 ---
-
-            // 1. 计算当前分数相对于最高分的“热度百分比”
             const hotness = item.score / maxScore;
-
-            // 2. 根据热度百分比计算颜色的 alpha (不透明度)
-            // 我们让最低的 alpha 是 0.5，确保低分也能看清
             const alpha = 0.5 + (hotness * 0.5);
             const colorStyle = `style="color: rgba(220, 38, 38, ${alpha});"`;
-
-            // 3. 根据热度百分比选择状态 Emoji
-            let statusEmoji = '🔥'; // 默认
-            if (hotness >= 0.8) {
-                statusEmoji = '🔥🔥🔥';
-            } else if (hotness >= 0.4) {
-                statusEmoji = '🔥🔥';
-            }
-
-            // 如果是榜首，直接给最强状态！
-            if (item.score === maxScore && maxScore > threshold) {
-                statusEmoji = '🌋';
-            }
-
-            // 4. 渲染行
-            tr.innerHTML = `<td>${rank++}</td>
-                          <td style="font-weight:bold;">${item.word}</td>
-                          <td class="trend-up" ${colorStyle}>${item.score.toFixed(2)}</td>
-                          <td>${statusEmoji}</td>`;
-
+            let statusEmoji = '🔥';
+            if (hotness >= 0.8) statusEmoji = '🔥🔥🔥';
+            else if (hotness >= 0.4) statusEmoji = '🔥🔥';
+            if (item.score === maxScore && maxScore > threshold) statusEmoji = '🌋';
+            tr.innerHTML = `<td>${rank++}</td><td style="font-weight:bold;">${item.word}</td><td class="trend-up" ${colorStyle}>${item.score.toFixed(2)}</td><td>${statusEmoji}</td>`;
         } else {
-            // --- 下降趋势保持原样（也可以按同样逻辑扩展） ---
-            tr.innerHTML = `<td>${rank++}</td>
-                          <td style="font-weight:bold;">${item.word}</td>
-                          <td class="trend-down">${item.score.toFixed(2)}</td>
-                          <td>❄️</td>`;
+            tr.innerHTML = `<td>${rank++}</td><td style="font-weight:bold;">${item.word}</td><td class="trend-down">${item.score.toFixed(2)}</td><td>❄️</td>`;
         }
-
         tbody.appendChild(tr);
     });
 }
@@ -547,7 +568,7 @@ function viewHistory() {
     if (!s || !e) return;
 
     const k = document.getElementById('displayK').value || 10;
-    
+
     // 2. 【核心修正】立即更新 UI 和全局状态，提供即时反馈
     isHistoryMode = true; // 更新状态
     const toggleButton = document.getElementById('historyToggleButton');
@@ -820,16 +841,16 @@ function executeReset() {
             });
             document.getElementById('trendBody').innerHTML = "";
             document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
-            
+
             // === 【核心修正】 ===
             // 1. 获取正确的、合并后的新按钮
             const toggleButton = document.getElementById('historyToggleButton');
-            
+
             // 2. 彻底重置按钮的所有状态，恢复到初始样貌
             toggleButton.textContent = '回放图表';
             toggleButton.classList.add('purple');
             toggleButton.classList.remove('btn-pulse');
-            
+
             document.getElementById('history-mode-overlay').classList.remove('show');
             log("✅ System & Log Cleared.", "00:00:00");
             showNotification('系统重置', '内存数据及日志文件已全部清空', 'danger', 6000);
@@ -922,7 +943,7 @@ function toggleBenchmarkMode() {
         apiPost('/api/command', { cmd: `[ACTION] BENCHMARK_STOP` });
         showNotification('压力测试', '已发送终止指令', 'warning', 3000);
         updateBenchmarkButtonUI(false); // 立即将按钮恢复为“启动”状态
-    } 
+    }
     // 否则，执行“启动”逻辑
     else {
         const n = validateNumber('benchN', 1, 100000, "Benchmark N");
@@ -947,26 +968,26 @@ function checkBenchmarkStatus() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cmd: `[ACTION] BENCHMARK_STATUS` })
     })
-    .then(res => res.json())
-    .then(data => {
-        if (!data.is_running) {
+        .then(res => res.json())
+        .then(data => {
+            if (!data.is_running) {
+                if (benchmarkPollTimer) {
+                    clearInterval(benchmarkPollTimer);
+                    benchmarkPollTimer = null;
+                    showNotification('压力测试完成', `数据注入成功！`, 'success', 5000);
+                    updateBenchmarkButtonUI(false); // 【修改点】测试完成后，重置按钮
+                }
+            }
+        })
+        .catch(err => {
             if (benchmarkPollTimer) {
                 clearInterval(benchmarkPollTimer);
                 benchmarkPollTimer = null;
-                showNotification('压力测试完成', `数据注入成功！`, 'success', 5000);
-                updateBenchmarkButtonUI(false); // 【修改点】测试完成后，重置按钮
+                showNotification('查询失败', '无法获取压测状态，请检查连接。', 'danger');
+                updateBenchmarkButtonUI(false); // 【修改点】查询失败后，也重置按钮
+                console.error("Benchmark status check failed:", err);
             }
-        }
-    })
-    .catch(err => {
-        if (benchmarkPollTimer) {
-            clearInterval(benchmarkPollTimer);
-            benchmarkPollTimer = null;
-            showNotification('查询失败', '无法获取压测状态，请检查连接。', 'danger');
-            updateBenchmarkButtonUI(false); // 【修改点】查询失败后，也重置按钮
-            console.error("Benchmark status check failed:", err);
-        }
-    });
+        });
 }
 
 

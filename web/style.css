@@ -1743,3 +1743,75 @@ table th:nth-child(1), table td:nth-child(1) { width: 12%; }
 table th:nth-child(2), table td:nth-child(2) { width: 36%; }
 table th:nth-child(3), table td:nth-child(3) { width: 28%; }
 table th:nth-child(4), table td:nth-child(4) { width: 24%; }
+
+
+/* ========================================================= */
+/* == 【UI优化1】趋势分析表格行悬浮高亮效果 == */
+/* ========================================================= */
+table tbody tr {
+    transition: background-color 0.2s ease-in-out; /* 增加一个平滑过渡效果 */
+}
+
+table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.7); /* 鼠标悬浮时变为半透明白色 */
+    cursor: pointer; /* 鼠标变为手型，暗示可交互 */
+}
+
+
+
+/* ========================================================= */
+/* == 【UI优化2-修复版】统一的状态遮罩层样式 == */
+/* ========================================================= */
+.state-overlay {
+    position: absolute;
+    inset: 0; /* 关键：让遮罩层完美覆盖其相对定位的父容器 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 5;
+    text-align: center;
+    line-height: 1.5;
+
+    /* --- 【核心修复】让遮罩层拥有和卡片完全一样的玻璃质感 --- */
+    background: rgba(255, 255, 255, 0.6); /* 更不透明一点，让文字更清晰 */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 12px; /* 匹配卡片的圆角 */
+    
+    /* 默认隐藏，通过 transition 实现平滑显示/隐藏 */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.state-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.state-overlay p {
+    margin-top: 15px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #4b5563;
+}
+
+/* 加载动画样式 (保持不变) */
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #2563eb;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* 当处于“无数据”状态时，隐藏加载圈 */
+#chart-state-overlay.no-data .spinner {
+    display: none;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
