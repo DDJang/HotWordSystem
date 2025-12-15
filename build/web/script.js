@@ -5,12 +5,58 @@ var historyWindowText = "";
 
 var myChart = echarts.init(document.getElementById('mainChart'));
 myChart.setOption({
-    tooltip: { trigger: 'axis' },
+    tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(31, 41, 55, 0.9)', // -> 更深、半透明的背景
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+        textStyle: {
+            color: '#fff'
+        }
+    },
     grid: { left: '3%', right: '5%', bottom: '13%', containLabel: true, top: '10%' },
-    xAxis: { type: 'category', data: [] },
-    yAxis: { type: 'value' },
-    universalTransition: { enabled: true, duration: 500 },
-    series: [{ type: 'bar', data: [], itemStyle: { color: '#3b82f6', borderRadius: [4, 4, 0, 0] }, label: { show: true, position: 'top' } }]
+    xAxis: {
+        type: 'category',
+        data: [],
+        axisLabel: { color: '#6b7280' }, // -> 坐标文字颜色变柔和
+        axisTick: { show: false }, // -> 隐藏刻度线
+        axisLine: { lineStyle: { color: 'rgba(0,0,0,0.1)' } } // -> 轴线颜色变淡
+    },
+    yAxis: {
+        type: 'value',
+        axisLabel: { color: '#6b7280' },
+        splitLine: { lineStyle: { color: 'rgba(0,0,0,0.05)', type: 'dashed' } } // -> 网格线变虚、变淡
+    },
+    series: [{
+        type: 'bar',
+        data: [],
+        itemStyle: {
+            // 【核心】定义柱体的渐变色
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(59, 130, 246, 1)' },   // 顶部：主题蓝色
+                { offset: 1, color: 'rgba(37, 99, 235, 0.7)' }   // -> 底部：更深、半透明的纯蓝色
+            ]),
+            borderRadius: 10, // -> 圆角胶囊形状
+
+            // 【核心】为柱体增加阴影，营造悬浮感
+            shadowColor: 'rgba(0, 0, 0, 0.2)',
+            shadowBlur: 10,
+            shadowOffsetY: 5
+        },
+        // 【核心】鼠标悬浮时的辉光效果
+        emphasis: {
+            itemStyle: {
+                // 悬浮时，使用更亮的蓝色作为辉光
+                shadowColor: 'rgba(59, 130, 246, 0.8)',
+                shadowBlur: 20
+            }
+        },
+        label: {
+            show: true,
+            position: 'top',
+            color: '#374151', // -> 标签文字颜色
+            fontWeight: 'bold'
+        }
+    }]
 });
 
 window.addEventListener('resize', function () {
@@ -298,16 +344,63 @@ function loadConfigState() {
 
 loadConfigState();
 
+
 function renderTrends(list) {
     const tbody = document.getElementById('trendBody');
     const threshold = parseFloat(document.getElementById('trendThreshold').value) || 0;
     tbody.innerHTML = "";
     let rank = 1;
+
+    // 【新增】第一步：找出所有正分中的最高分，用于后续计算百分比
+    // 如果没有正分，默认 maxScore 为 1，防止除以零
+    const positiveScores = list.map(item => item.score).filter(score => score > 0);
+    const maxScore = positiveScores.length > 0 ? Math.max(...positiveScores) : 1;
+
     list.forEach(item => {
+        // 过滤掉低于阈值的数据
         if (Math.abs(item.score) < threshold) return;
+
         const tr = document.createElement('tr');
-        const trendClass = item.score > 0 ? "trend-up" : "trend-down";
-        tr.innerHTML = `<td>${rank++}</td><td style="font-weight:bold;">${item.word}</td><td class="${trendClass}">${item.score.toFixed(2)}</td><td class="${trendClass}">${item.score > 0 ? "🔥" : "❄️"}</td>`;
+
+        // 【核心修改】区分处理上升趋势和下降趋势
+        if (item.score > 0) {
+            // --- 这是上升趋势的动态样式 ---
+
+            // 1. 计算当前分数相对于最高分的“热度百分比”
+            const hotness = item.score / maxScore;
+
+            // 2. 根据热度百分比计算颜色的 alpha (不透明度)
+            // 我们让最低的 alpha 是 0.5，确保低分也能看清
+            const alpha = 0.5 + (hotness * 0.5);
+            const colorStyle = `style="color: rgba(220, 38, 38, ${alpha});"`;
+
+            // 3. 根据热度百分比选择状态 Emoji
+            let statusEmoji = '🔥'; // 默认
+            if (hotness >= 0.8) {
+                statusEmoji = '🔥🔥🔥';
+            } else if (hotness >= 0.4) {
+                statusEmoji = '🔥🔥';
+            }
+
+            // 如果是榜首，直接给最强状态！
+            if (item.score === maxScore && maxScore > threshold) {
+                statusEmoji = '🌋';
+            }
+
+            // 4. 渲染行
+            tr.innerHTML = `<td>${rank++}</td>
+                          <td style="font-weight:bold;">${item.word}</td>
+                          <td class="trend-up" ${colorStyle}>${item.score.toFixed(2)}</td>
+                          <td>${statusEmoji}</td>`;
+
+        } else {
+            // --- 下降趋势保持原样（也可以按同样逻辑扩展） ---
+            tr.innerHTML = `<td>${rank++}</td>
+                          <td style="font-weight:bold;">${item.word}</td>
+                          <td class="trend-down">${item.score.toFixed(2)}</td>
+                          <td>❄️</td>`;
+        }
+
         tbody.appendChild(tr);
     });
 }
@@ -407,7 +500,7 @@ function removeSensitive(w) {
     // 2. 填充弹窗的动态内容
     const textElement = document.getElementById('removeSensitiveText');
     textElement.innerHTML = `您确定要从屏蔽列表中移除 “<span class="highlight-word">${w}</span>” 吗？`;
-    
+
     // 3. 显示弹窗
     const modal = document.getElementById('removeSensitiveModal');
     modal.classList.add('show');
@@ -444,7 +537,15 @@ function viewHistory() {
                 xAxis: { data: d.categories },
                 series: [{
                     data: historySeriesData,
-                    itemStyle: { color: '#8b5cf6' }
+                    itemStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(168, 85, 247, 1)' }, // 顶部：亮紫色
+                            { offset: 1, color: 'rgba(139, 92, 246, 0.6)' }  // 底部：半透明深紫
+                        ]),
+                        shadowColor: 'rgba(0, 0, 0, 0.2)',
+                        shadowBlur: 10,
+                        shadowOffsetY: 5
+                    }
                 }],
                 grid: {
                     top: 80
@@ -459,7 +560,18 @@ function backToRealtime() {
     document.getElementById('btnBackRealtime').classList.remove('btn-pulse');
     document.getElementById('history-mode-overlay').classList.remove('show');
     myChart.setOption({
-        series: [{ itemStyle: { color: '#3b82f6' } }],
+        series: [{
+            itemStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: 'rgba(59, 130, 246, 1)' },
+                    { offset: 1, color: 'rgba(37, 99, 235, 0.7)' }   // -> 底部：更深、半透明的纯蓝色
+                ]),
+                borderRadius: 10,
+                shadowColor: 'rgba(0, 0, 0, 0.2)',
+                shadowBlur: 10,
+                shadowOffsetY: 5
+            }
+        }],
         grid: { top: '10%' }
     });
 
@@ -614,7 +726,7 @@ function showSensitiveInfo() {
     const isEnabled = document.getElementById('cb_filter_sensitive_enable').checked;
     const title = '🛡️ 敏感词过滤说明';
     let content = '';
-    
+
     if (!isEnabled) {
         content = '<p>当前 <strong>未启用</strong> 敏感词过滤。</p><p>所有词汇（包括已添加的敏感词）都将正常显示在榜单中。</p>';
     } else {
@@ -657,7 +769,7 @@ function closeResetModal(e) {
 function executeReset() {
     // 1. 关闭弹窗
     closeResetModal(null);
-    
+
     // 2. 执行旧的清空逻辑
     document.getElementById('history-mode-overlay').classList.remove('show');
     log("Sending Reset...", "00:00:00");
@@ -667,25 +779,25 @@ function executeReset() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cmd: `[ACTION] RESET` })
     })
-    .then(r => r.json())
-    .then(d => {
-        isHistoryMode = false;
-        myChart.setOption({
-            xAxis: { data: [] },
-            series: [{ data: [], itemStyle: { color: '#3b82f6' } }],
-            grid: { top: '10%' }
+        .then(r => r.json())
+        .then(d => {
+            isHistoryMode = false;
+            myChart.setOption({
+                xAxis: { data: [] },
+                series: [{ data: [], itemStyle: { color: '#3b82f6' } }],
+                grid: { top: '10%' }
+            });
+            document.getElementById('trendBody').innerHTML = "";
+            document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
+            document.getElementById('btnBackRealtime').classList.remove('btn-pulse');
+            document.getElementById('history-mode-overlay').classList.remove('show');
+            log("✅ System & Log Cleared.", "00:00:00");
+            showNotification('系统重置', '内存数据及日志文件已全部清空', 'danger', 6000);
+        })
+        .catch(e => {
+            log("❌ " + e);
+            showNotification('重置失败', '连接服务器时发生错误', 'danger');
         });
-        document.getElementById('trendBody').innerHTML = "";
-        document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
-        document.getElementById('btnBackRealtime').classList.remove('btn-pulse');
-        document.getElementById('history-mode-overlay').classList.remove('show');
-        log("✅ System & Log Cleared.", "00:00:00");
-        showNotification('系统重置', '内存数据及日志文件已全部清空', 'danger', 6000);
-    })
-    .catch(e => {
-        log("❌ " + e);
-        showNotification('重置失败', '连接服务器时发生错误', 'danger');
-    });
 }
 
 
@@ -732,7 +844,7 @@ function executeRemoveSensitive() {
         // 2. 清理工作
         wordToRemove = null; // 清空全局变量
     }
-    
+
     // 3. 关闭弹窗
     closeRemoveSensitiveModal(null);
 }
