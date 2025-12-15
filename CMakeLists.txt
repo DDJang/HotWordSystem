@@ -18,17 +18,16 @@ include_directories(
 # 2. 定义源文件
 # 主程序源文件
 set(MAIN_SOURCES "src/main.cpp")
-
-# 测试程序源文件 (指向新的 test/unittest 目录)
+# 定义共享的 Context 源文件
+set(CONTEXT_SOURCE "src/SystemContext.cpp")
+# 测试程序源文件
 set(TEST_SOURCES "test/unittest/test_main.cpp")
 
 # 3. 生成主程序
-add_executable(HotWordSystem ${MAIN_SOURCES})
-# 如果有公共源文件: add_executable(HotWordSystem ${MAIN_SOURCES} ${COMMON_SOURCES})
+add_executable(HotWordSystem ${MAIN_SOURCES} ${CONTEXT_SOURCE})
 
 # 4. 生成单元测试程序
-add_executable(RunTests ${TEST_SOURCES})
-# 如果有公共源文件: add_executable(RunTests ${TEST_SOURCES} ${COMMON_SOURCES})
+add_executable(RunTests ${TEST_SOURCES} ${CONTEXT_SOURCE})
 
 # --- 针对 Windows 平台的特定配置 ---
 if(WIN32)

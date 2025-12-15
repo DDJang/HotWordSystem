@@ -141,6 +141,33 @@ RunTests/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\RunTests.dir\build.make CMakeFiles/RunTests.dir/build
 .PHONY : RunTests/fast
 
+src/SystemContext.obj: src/SystemContext.cpp.obj
+.PHONY : src/SystemContext.obj
+
+# target to build an object file
+src/SystemContext.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\HotWordSystem.dir\build.make CMakeFiles/HotWordSystem.dir/src/SystemContext.cpp.obj
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\RunTests.dir\build.make CMakeFiles/RunTests.dir/src/SystemContext.cpp.obj
+.PHONY : src/SystemContext.cpp.obj
+
+src/SystemContext.i: src/SystemContext.cpp.i
+.PHONY : src/SystemContext.i
+
+# target to preprocess a source file
+src/SystemContext.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\HotWordSystem.dir\build.make CMakeFiles/HotWordSystem.dir/src/SystemContext.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\RunTests.dir\build.make CMakeFiles/RunTests.dir/src/SystemContext.cpp.i
+.PHONY : src/SystemContext.cpp.i
+
+src/SystemContext.s: src/SystemContext.cpp.s
+.PHONY : src/SystemContext.s
+
+# target to generate assembly for a file
+src/SystemContext.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\HotWordSystem.dir\build.make CMakeFiles/HotWordSystem.dir/src/SystemContext.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\RunTests.dir\build.make CMakeFiles/RunTests.dir/src/SystemContext.cpp.s
+.PHONY : src/SystemContext.cpp.s
+
 src/main.obj: src/main.cpp.obj
 .PHONY : src/main.obj
 
@@ -199,6 +226,9 @@ help:
 	@echo ... rebuild_cache
 	@echo ... HotWordSystem
 	@echo ... RunTests
+	@echo ... src/SystemContext.obj
+	@echo ... src/SystemContext.i
+	@echo ... src/SystemContext.s
 	@echo ... src/main.obj
 	@echo ... src/main.i
 	@echo ... src/main.s
