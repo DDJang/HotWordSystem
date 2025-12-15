@@ -46,6 +46,7 @@ body {
     height: 100%;
     box-sizing: border-box;
     box-shadow: none;        /* 去掉大阴影 */
+    padding-bottom: 40px; /* 底部留空，防止内容被遮挡 */
 }
 
 
