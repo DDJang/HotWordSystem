@@ -296,19 +296,40 @@ th {
     text-shadow: 0 1px 0 rgba(255, 255, 255, 1);
 }
 
+
 #log {
     font-family: 'Consolas', monospace;
-    font-size: 12px;
-    color: #10b981;
-    background: #1f2937;
+    font-size: 13px;
+    color: #374151; /* [修改] 文字改为深灰色以适应浅色背景 */
+    background: rgba(0, 0, 0, 0.05); /* [修改] 一个非常淡的背景，让其区域可辨 */
     padding: 10px;
-    border-radius: 6px;
+    border-radius: 8px;
     min-height: 40px;
     max-height: 80px;
     overflow-y: auto;
     white-space: pre-wrap;
     margin-bottom: 0;
+    border: 1px solid rgba(0, 0, 0, 0.05); /* [新增] 添加一个细微的边框 */
 }
+/* 适用于 Chrome, Edge, Safari */
+#log::-webkit-scrollbar {
+    width: 6px;
+}
+#log::-webkit-scrollbar-track {
+    background: transparent; /* 轨道透明 */
+}
+#log::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.35); /* 滑块为半透明深灰色，对比度更高 */
+    border-radius: 6px;
+}
+
+/* 适用于 Firefox */
+#log {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.35) transparent;
+}
+
+
 
 /* 弹窗样式 */
 /* --- 液态玻璃模态框 (Stats Modal) --- */
@@ -980,60 +1001,37 @@ input:checked+.slider:before {
 
 
 /* style.css -> 替换所有 #right-col-header 相关的旧样式 */
-/* 1. 粘性头部容器：本身透明，为子元素和伪元素提供定位基准 */
+/* 1. 粘性头部容器本身 */
 #right-col-header {
     position: sticky;
     top: 0;
     z-index: 10;
-    padding-top: 10px;
-    background: transparent; /* 必须为透明，以便 ::after 的 backdrop-filter 生效 */
+    background: rgba(243, 244, 246, 0.85); /* 增加一点不透明度，让文字更清晰 */
+    
+    /* 核心：保持强大的背景模糊 */
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
 
-    margin: 0 -10px;      /* -> 新增：向左右各拉伸 10px */
-    padding: 10px 10px 0; /* -> 修改：恢复顶部和左右的内边距 */
+    /* 关键：增加底部内边距，为下方的羽化遮罩留出空间 */
+    padding: 15px 20px 25px 20px;
+    margin: 0 -10px;
+
+    /* 
+       【终极武器】使用 mask-image 实现底部羽化效果
+       这会让整个元素（包括它的 backdrop-filter 效果）在底部平滑地消失，
+       从而从根本上消除任何硬边缘。
+    */
+    -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
 }
-
-/* 2. 顶部行（标题+按钮）的布局 */
+/* 2. 标题行的下边距，使其与日志框分开 */
 #right-col-header-top-row {
+    margin-bottom: 15px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
 }
 
-/* 3. 使用 ::before 伪元素来创建“看得见的”实体背景 */
-/*    这个背景只覆盖标题和日志框的区域 */
-#right-col-header::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1; /* 把它放在内容层的后面 */
-    background: var(--bg); /* 我们看到的实心背景 */
-}
-
-/* 4. 使用 ::after 伪元素创建“磨砂玻璃过渡区域” (核心修正) */
-#right-col-header::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    width: 100%;
-
-    /* 关键：将过渡区域定位在粘性头部的正下方 */
-    top: 100%; 
-    height: 60px; /* 过渡区域的高度 */
-
-    /* a) “磨砂玻璃”的半透明底色 */
-    background: rgba(243, 244, 246, 0.7); /* 使用背景色+70%不透明度 */
-
-    /* b) “磨砂玻璃”的模糊效果 */
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-
-    /* c) 让整个“磨砂玻璃”区域从上到下平滑消失 */
-    -webkit-mask-image: linear-gradient(to bottom, black, transparent);
-    mask-image: linear-gradient(to bottom, black, transparent);
-    
-    pointer-events: none;
-}
 
 
 
