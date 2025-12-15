@@ -252,9 +252,35 @@ table {
     font-size: 13px;
 }
 
+/* === 【核心】自定义每列的宽度 === */
+table th:nth-child(1), /* 序号 */
+table td:nth-child(1) {
+    width: 8%;        /* 序号列：略微压缩 */
+    text-align: center; /* 居中显示序号 */
+}
+
+table th:nth-child(2), /* 热词 */
+table td:nth-child(2) {
+    width: 64%;       /* 热词列：占据大部分空间 */
+    font-weight: bold; /* 字体加粗 */
+    text-align: center; /* 热词居中显示 */
+}
+
+table th:nth-child(3), /* 趋势分 */
+table td:nth-child(3) {
+    width: 14%;       /* 趋势分列：略微压缩 */
+    text-align: right; /* 数字右对齐 */
+    font-family: 'Consolas', monospace; /* 等宽字体，防止数字跳动 */
+}
+
+table th:nth-child(4), /* 状态 */
+table td:nth-child(4) {
+    width: 14%;       /* 状态列：略微压缩 */
+    text-align: center; /* 表情居中 */
+}
+
 th,
 td {
-    text-align: left;
     padding: 6px;
     border-bottom: 1px solid #eee;
 }
