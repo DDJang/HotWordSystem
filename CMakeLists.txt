@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.10)
 project(HotWordSystem)
 
+# 如果检测到是 MinGW 编译器，开启静态链接
+if(MINGW)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
+    # 有时候还需要显式链接 pthread，视版本而定
+    link_libraries(-static) 
+endif()
+
 # 设置 C++ 标准
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

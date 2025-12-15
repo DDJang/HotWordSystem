@@ -6,5 +6,5 @@ CXX_DEFINES = -DNOMINMAX -DWIN32_LEAN_AND_MEAN
 
 CXX_INCLUDES = @CMakeFiles/RunTests.dir/includes_CXX.rsp
 
-CXX_FLAGS = -g -std=gnu++17
+CXX_FLAGS =  -static -g -std=gnu++17
 
