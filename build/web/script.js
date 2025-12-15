@@ -9,11 +9,28 @@ var myChart = echarts.init(document.getElementById('mainChart'));
 myChart.setOption({
     tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(31, 41, 55, 0.9)', // -> 更深、半透明的背景
-        borderColor: 'rgba(255, 255, 255, 0.2)',
+
+        // 1. 背景色设为半透明白色 (不再是黑色)
+        backgroundColor: 'rgba(255, 255, 255, 0.6)',
+
+        // 2. 边框颜色 (玻璃边缘的高光)
+        borderColor: 'rgba(255, 255, 255, 0.8)',
+        borderWidth: 1,
+
+        // 3. 文字颜色改为深色 (因为背景变亮了)
         textStyle: {
-            color: '#fff'
-        }
+            color: '#1f2937', // 深灰色文字
+            fontSize: 13,
+            fontWeight: 600
+        },
+
+        // 4. 【核心】注入 CSS 实现磨砂玻璃 + 液态阴影效果
+        extraCssText: `
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        border-radius: 12px;
+    `
     },
     grid: { left: '3%', right: '5%', bottom: '13%', containLabel: true, top: '10%' },
     xAxis: {
@@ -148,14 +165,14 @@ function fetchAndUpdateRealtimeChart() {
             // 3. 【核心修复】安全地更新全局状态
             // 只有当服务器返回有效值时，才更新用于 Info 弹窗的全局变量
             if (data.window_sec !== undefined) {
-                currentWindowSize = data.window_sec; 
+                currentWindowSize = data.window_sec;
                 // 【关键】只有在首次加载时，才去修改输入框的值！
                 // 之后无论服务器返回什么，都不要动输入框，防止打断用户打字
                 if (isInitialLoad) {
                     document.getElementById('winSize').value = data.window_sec;
                 }
             }
-            
+
             if (data.retention_sec !== undefined) {
                 currentRetentionSize = data.retention_sec;
                 // 【关键】同上，只在首次加载时修改输入框
@@ -442,7 +459,7 @@ function log(msg, customTime = null) {
 function updateWindowSize() {
     const s = validateNumber('winSize', 1, 2592000, "Window Size");
     if (s !== null) {
-        currentWindowSize = s; 
+        currentWindowSize = s;
         apiPost('/api/command', { cmd: `[ACTION] SET_WINDOW S=${s}` });
         showNotification('视图设置', `窗口大小已更新为 ${s} 秒`, 'success');
     }
