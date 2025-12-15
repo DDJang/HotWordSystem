@@ -911,3 +911,18 @@ function toggleHistoryMode() {
         viewHistory();
     }
 }
+
+
+
+/**
+ * 终止压力测试
+ */
+function stopBench() {
+    apiPost('/api/command', { cmd: `[ACTION] BENCHMARK_STOP` })
+        .then(() => {
+            showNotification('压力测试', '已成功发送终止指令。', 'warning', 3000);
+        })
+        .catch(() => {
+            showNotification('操作失败', '发送终止指令时出错，请检查连接。', 'danger');
+        });
+}

@@ -17,6 +17,7 @@ private:
     // 正则表达式
     const std::regex timeRegex{R"(\[(\d{1,2}:\d{1,2}:\d{1,2})\]\s*(.*))"};
     const std::regex benchRegex{R"(\[ACTION\]\s*BENCHMARK\s*N=(\d+))"};
+    const std::regex stopBenchRegex{R"(\[ACTION\]\s*BENCHMARK_STOP)"};
     const std::regex windowRegex{R"(\[ACTION\]\s*SET_WINDOW\s*S=(\d+))"};
     const std::regex historyRegex{R"(\[ACTION\]\s*HISTORY\s*START=(\d{1,2}:\d{1,2}:\d{1,2})\s*END=(\d{1,2}:\d{1,2}:\d{1,2})\s*STEP=(\d+))"};
     const std::regex resetRegex{R"(\[ACTION\]\s*RESET)"}; 
@@ -83,6 +84,11 @@ public:
                 ctx.abortBenchmark = false; 
                 std::thread([this, n](){ runBenchmark(n); }).detach();
                 finalOutput << "[Cmd] Benchmark started N=" << n << "\n";
+            }
+            // 【新增】指令：终止压测
+            else if (std::regex_search(line, match, stopBenchRegex)) {
+                ctx.abortBenchmark = true;
+                finalOutput << "[Cmd] Benchmark stop signal sent.\n";
             }
             // 4. 指令: 性能
             else if (line.find("[ACTION] STATS") != std::string::npos) {
