@@ -29,26 +29,52 @@
             <div id="mainChart" style="width:100%; height:90%;"></div>
         </div>
 
-        <!-- 左侧趋势分析卡片 -->
-        <div class="card" style="flex: 1;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
-                <h2 style="margin:0;">📈 趋势分析</h2>
-                <!-- 原本这里的输入框已移至右侧视图设置 -->
+        <!-- 【新增】一个容器，用于平分下半部分空间 -->
+        <div class="bottom-row-container">
+
+            <!-- 1. 这是您原来的“趋势分析”模块 -->
+            <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                    <h2 style="margin:0;">📈 趋势分析</h2>
+                </div>
+                <div style="overflow-y: auto; flex: 1;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>热词</th>
+                                <th>趋势分</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trendBody"></tbody>
+                    </table>
+                </div>
             </div>
-            <div style="overflow-y: auto; flex: 1;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>热词</th>
-                            <th>趋势分</th>
-                            <th>状态</th>
-                        </tr>
-                    </thead>
-                    <tbody id="trendBody"></tbody>
-                </table>
+
+            <!-- 2. 这是我们移过来的“数据模拟”模块，并调整了内部UI -->
+            <div class="control-group" id="data-simulation-panel-left">
+                <h2 style="margin:0; margin-bottom: 10px;">📝 数据模拟</h2>
+
+                <!-- 【核心UI调整】上下布局 -->
+                <div class="data-simulation-layout-vertical">
+                    <div class="textarea-container">
+                        <textarea id="manualInput" placeholder="在此输入单行或多行模拟数据..."></textarea>
+                    </div>
+
+                    <!-- 【新增】一个用于放置底部按钮的行容器 -->
+                    <div class="bottom-buttons-row">
+                        <button onclick="sendManualData()">发送数据</button>
+                        <button onclick="document.getElementById('fileUploader').click()"
+                            class="secondary">上传文件</button>
+                        <input type="file" id="fileUploader" style="display: none;" onchange="uploadFile(event)">
+                    </div>
+                </div>
+
             </div>
         </div>
+
+
     </div>
 
     <div class="right-col">
@@ -92,21 +118,7 @@
         <!-- ========= 从这里开始是重新排序的模块 ========= -->
         <!-- ============================================= -->
 
-        <!-- 1. 数据模拟 (Input) -->
-        <div class="control-group">
-            <h3>📝 数据模拟</h3>
-            <div class="row input-group-interactive">
-                <textarea id="manualInput" rows="1" placeholder="输入内容..."></textarea>
-                <button onclick="sendManualData()">发送</button>
-            </div>
-            <div class="row" style="margin-top: 8px;">
-                <input type="file" id="fileUploader" style="display: none;" onchange="uploadFile(event)">
-                <button onclick="document.getElementById('fileUploader').click()" class="secondary"
-                    style="width: 100%;">
-                    上传文件
-                </button>
-            </div>
-        </div>
+
 
         <!-- 2. 词性过滤 (Processing Rule) -->
         <div class="control-group">

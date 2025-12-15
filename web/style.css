@@ -109,6 +109,7 @@ textarea {
     border-radius: 6px;
     box-sizing: border-box;
     font-size: 13px;
+    font-family: 'Segoe UI', sans-serif;
 }
 
 
@@ -1120,27 +1121,32 @@ input:checked+.slider:before {
 
 
 /* ========================================= */
-/* == 1. 美化右侧滚动条 (玻璃风格) == */
+/* == 【修改后】统一美化所有滚动条 (玻璃风格) == */
 /* ========================================= */
-/* 针对 Webkit 内核浏览器 (Chrome, Edge, Safari) */
-.right-col::-webkit-scrollbar {
-    width: 6px; /* -> 变细 */
+/* --- 针对 Webkit 内核浏览器 (Chrome, Edge, Safari) --- */
+/* 1. 将样式同时应用到 .right-col 和 #manualInput */
+.right-col::-webkit-scrollbar,
+#manualInput::-webkit-scrollbar {
+    width: 6px;
 }
 
-.right-col::-webkit-scrollbar-track {
-    background: transparent; /* -> 轨道完全透明 */
+.right-col::-webkit-scrollbar-track,
+#manualInput::-webkit-scrollbar-track {
+    background: transparent;
 }
 
-.right-col::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.5); /* -> 滑块半透明 */
+.right-col::-webkit-scrollbar-thumb,
+#manualInput::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.35); /* 使用更深的颜色以适应亮色背景 */
     border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
-/* 针对 Firefox */
-.right-col {
+/* --- 针对 Firefox --- */
+.right-col,
+#manualInput {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.5) transparent;
+    scrollbar-color: rgba(0, 0, 0, 0.35) transparent;
 }
 
 
@@ -1635,3 +1641,105 @@ textarea:focus {
         background-position: 0% 50%;
     }
 }
+
+
+
+/* ========================================================= */
+/* == 【新增】左侧栏下半部分的新布局样式 == */
+/* ========================================================= */
+
+/* 1. 创建一个 Flex 容器来实现左右平分 */
+.bottom-row-container {
+    flex: 1;                 /* 占据图表下方的所有剩余空间 */
+    display: flex;           /* 启用 Flex 布局 */
+    gap: 20px;               /* 两个模块之间的间距 */
+    min-height: 0;           /* Flex 布局的关键，防止子元素溢出 */
+}
+
+/* 2. 让两个子模块（趋势分析和数据模拟）各占一半 */
+.bottom-row-container > .card,
+.bottom-row-container > .control-group {
+    flex: 1;                 /* 核心：平分空间 */
+    min-width: 0;            /* 防止内容过长时撑破布局 */
+    display: flex;           /* 启用 Flex 布局 */
+    flex-direction: column;  /* 让模块内部内容垂直排列 */
+}
+
+
+
+/* ========================================================= */
+/* == 【修改后】数据模拟模块UI样式 == */
+/* ========================================================= */
+/* 新的上下布局容器 */
+.data-simulation-layout-vertical {
+    flex: 1;                 
+    display: flex;
+    flex-direction: column;  /* 垂直排列 */
+    gap: 12px;               /* 文本框和按钮行之间的间距 */
+}
+
+/* 文本框容器，让文本框能撑满剩余空间 */
+.textarea-container {
+    flex: 1;                 
+    display: flex;
+}
+
+/* 【需求3】文本框固定，不可拖动 */
+#manualInput {
+    width: 100%;
+    height: 100%;
+    margin: 0 !important;
+    resize: none !important; /* 禁止拖动调整大小 */
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-y: auto;
+}
+
+/* 【需求4】底部的按钮行，水平排列 */
+.bottom-buttons-row {
+    display: flex;
+    gap: 12px; /* 按钮之间的间距 */
+}
+
+/* 按钮样式 */
+.bottom-buttons-row button {
+    flex: 1; /* 让两个按钮平分空间 */
+    margin: 0 !important;
+    height: 42px; /* 适中的按钮高度 */
+    font-size: 14px;
+}
+
+
+
+
+/* ========================================================= */
+/* == 【最终微调】确保显示10行表格内容 == */
+/* ========================================================= */
+
+/* 1. 确保趋势分析卡片能垂直拉伸 (保持不变) */
+.bottom-row-container > .card {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* 2. 让包含表格的 div 占据所有剩余空间 (保持不变) */
+.bottom-row-container .card > div:last-child {
+    flex: 1;
+    overflow-y: hidden !important;
+}
+
+/* 3. 【核心修复】进一步压缩行高 */
+table {
+    font-size: 12.5px; /* 轻微减小表格的整体字号 */
+}
+table th,
+table td {
+    padding: 3px 6px !important; /* 【关键】强制减小垂直和水平内边距 */
+    border-bottom: 1px solid #eee;
+}
+
+/* 4. 保持列宽分配 (保持不变) */
+table th:nth-child(1), table td:nth-child(1) { width: 12%; }
+table th:nth-child(2), table td:nth-child(2) { width: 36%; }
+table th:nth-child(3), table td:nth-child(3) { width: 28%; }
+table th:nth-child(4), table td:nth-child(4) { width: 24%; }
