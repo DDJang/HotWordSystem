@@ -297,19 +297,25 @@ th {
 }
 
 
+/* “液态玻璃”日志框样式 */
 #log {
     font-family: 'Consolas', monospace;
-    font-size: 13px;
-    color: #374151; /* [修改] 文字改为深灰色以适应浅色背景 */
-    background: rgba(0, 0, 0, 0.05); /* [修改] 一个非常淡的背景，让其区域可辨 */
-    padding: 10px;
-    border-radius: 8px;
+    font-size: 14px;
+    color: #1f2937;
+    padding: 12px 15px;
+    border-radius: 12px;
     min-height: 40px;
     max-height: 80px;
     overflow-y: auto;
     white-space: pre-wrap;
     margin-bottom: 0;
-    border: 1px solid rgba(0, 0, 0, 0.05); /* [新增] 添加一个细微的边框 */
+    
+    /* 保持精致的“镶嵌”外观 */
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.07);
+
+    /* [移除] 不再需要 z-index */
 }
 /* 适用于 Chrome, Edge, Safari */
 #log::-webkit-scrollbar {
@@ -1001,30 +1007,39 @@ input:checked+.slider:before {
 
 
 /* style.css -> 替换所有 #right-col-header 相关的旧样式 */
-/* 1. 粘性头部容器本身 */
+/* 1. Header 容器本身：现在只负责布局，并通过 padding-bottom 创建“羽化区” */
 #right-col-header {
     position: sticky;
     top: 0;
     z-index: 10;
-    background: rgba(243, 244, 246, 0.85); /* 增加一点不透明度，让文字更清晰 */
-    
-    /* 核心：保持强大的背景模糊 */
-    -webkit-backdrop-filter: blur(16px);
-    backdrop-filter: blur(16px);
-
-    /* 关键：增加底部内边距，为下方的羽化遮罩留出空间 */
-    padding: 15px 20px 25px 20px;
     margin: 0 -10px;
 
-    /* 
-       【终极武器】使用 mask-image 实现底部羽化效果
-       这会让整个元素（包括它的 backdrop-filter 效果）在底部平滑地消失，
-       从而从根本上消除任何硬边缘。
-    */
-    -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-    mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+    /* [核心] 增加底部内边距，为下方的羽化效果留出专属空间 */
+    /* 这确保了日志框等内容绝对不会进入羽化区域 */
+    padding: 15px 20px 40px 20px; 
 }
-/* 2. 标题行的下边距，使其与日志框分开 */
+/* 2. 背景伪元素：在这里应用所有视觉效果 */
+#right-col-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+
+    /* 保持您想要的强大模糊效果 */
+    background: rgba(243, 244, 246, 0.85);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+
+    /* 
+       [核心] 精准控制遮罩的渐变范围。
+       这个渐变表示：从顶部到底部 90% 的区域是完全不透明的，
+       只在最底部的 10% 区域（也就是我们用 padding 创造出的空间里）
+       快速地羽化为透明。
+    */
+    -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+}
+/* 3. 标题行的下边距，使其与日志框分开 */
 #right-col-header-top-row {
     margin-bottom: 15px;
     display: flex;
