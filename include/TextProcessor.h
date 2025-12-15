@@ -20,11 +20,11 @@ private:
     std::unordered_set<std::string> allowedTags;    // 允许的词性集合
 
     bool allowAllTags = false; // 是否允许所有词性
-    bool allowAllSensitive = false; // 【新增】敏感词开关
+    bool allowAllSensitive = false; // 敏感词开关
 
     mutable std::mutex mtx; // 互斥锁，保护配置修改
 
-    std::string sensitiveFilePath; // 【新增】保存文件路径
+    std::string sensitiveFilePath; // 保存文件路径
 
 public:
     TextProcessor(const std::string& dict_path, const std::string& hmm_path, 
@@ -43,10 +43,10 @@ public:
         // 定义允许的词性（默认配置）
         allowedTags = { "n", "ns", "nr", "nt", "nz", "v", "vn", "a", "eng" }; 
         allowAllTags = false;
-        allowAllSensitive = false; // 【新增】初始化 
+        allowAllSensitive = false; // 初始化 
     }
 
-    // 设置词性配置 (日志已区分)
+    // 设置词性配置
     void setPosConfig(const std::vector<std::string>& tags, bool allowAll) {
         std::lock_guard<std::mutex> lock(mtx);
         allowedTags.clear();
@@ -56,7 +56,7 @@ public:
         std::cout << "[Config] POS tags updated. AllowAllPos=" << std::boolalpha << allowAllTags << std::endl;
     }
 
-    // 【新增】单独设置敏感词开关 (解决日志混淆)
+    // 单独设置敏感词开关
     void setSensitiveConfig(bool allowAll) {
         std::lock_guard<std::mutex> lock(mtx);
         allowAllSensitive = allowAll;
@@ -78,13 +78,13 @@ public:
         return std::vector<std::string>(allowedTags.begin(), allowedTags.end());
     }
 
-    // 辅助：获取当前敏感词列表，返回值补全 std::
+    // 辅助：获取当前敏感词列表
     std::vector<std::string> getSensitiveWords() {
         std::lock_guard<std::mutex> lock(mtx);
         return std::vector<std::string>(sensitiveWords.begin(), sensitiveWords.end());
     }
 
-    // 【新增需求2】动态更新允许的词性
+    // 动态更新允许的词性
     void setAllowedTags(const std::vector<std::string>& tags) {
         std::lock_guard<std::mutex> lock(mtx);
         allowedTags.clear();
@@ -92,7 +92,7 @@ public:
         std::cout << "[Config] Allowed POS tags updated." << std::endl;
     }
 
-    // 【修改】动态增加敏感词 (支持持久化 + 线程安全)
+    // 动态增加敏感词 (支持持久化 + 线程安全)
     void addSensitiveWord(const std::string& word) {
         std::lock_guard<std::mutex> lock(mtx); // 1. 上锁，保护内存也保护文件
         
@@ -115,7 +115,7 @@ public:
     }
 
 
-    // 【修改】动态删除敏感词 (支持持久化 + 线程安全)
+    // 动态删除敏感词 (支持持久化 + 线程安全)
     void removeSensitiveWord(const std::string& word) {
         std::lock_guard<std::mutex> lock(mtx); // 1. 上锁
         
@@ -140,10 +140,10 @@ public:
 
     // 核心处理函数，
     std::vector<std::string> process(const std::string& sentence) {
-        // 【修复】限制单次处理的最大长度 (例如 1000KB)
+        // 限制单次处理的最大长度 (例如 1000KB)
         if (sentence.length() > 1024000) {
-            std::cerr << "[Warn] Input sentence too long, truncated." << std::endl;
-            // 可以选择截断或者直接返回空
+            std::cerr << "[Error] Input sentence too long." << std::endl;
+            // 直接返回空
             return {}; 
         }
 
@@ -151,7 +151,7 @@ public:
         std::unordered_set<std::string> currentSensitive;
         std::unordered_set<std::string> currentTags;
         bool useAllTags = false;
-        bool useAllSensitive = false; // 【新增】
+        bool useAllSensitive = false;
         {
             std::lock_guard<std::mutex> lock(mtx);
             currentSensitive = sensitiveWords;
@@ -181,7 +181,7 @@ public:
             bool shouldFilterSensitive = isSensitive && !useAllSensitive;
 
             if (stopWords.find(word) == stopWords.end() && 
-                !shouldFilterSensitive && // 【修改】如果不过滤敏感词，这里就放行
+                !shouldFilterSensitive && // 如果不过滤敏感词，这里就放行
                 isPosAllowed && 
                 word.size() > 1) { 
                 final_words.push_back(word);
@@ -191,7 +191,7 @@ public:
     }
 
 private:
-    // 使用 utfcpp 的迭代功能实现清洗函数，参数和返回值补全 std::
+    // 使用 utfcpp 的迭代功能实现清洗函数
     std::string sanitizeAndNormalize(const std::string& input) {
         if (input.empty()) {
             return "";

@@ -12,17 +12,18 @@
 #include <mutex>
 #include <utility>
 
+#include "SystemContext.h"
+
 class SlidingWindow {
 private:
     long long windowSizeSeconds;
     long long currentTimeCursor = 0;
     
-    // 最大保留时间（物理存储时间），例如 3600秒 (1小时)
-    // 即使窗口只有 10秒，我们也保留 1小时数据，以便用户随时把窗口拉大
-    long long maxRetentionSeconds = 3600; 
+    // 最大保留时间（物理存储时间），例如 6000秒 (100分钟)
+    // 即使窗口只有 10秒，我们也保留 100分钟数据，以便用户随时把窗口拉大
+    long long maxRetentionSeconds = 6000; 
 
     // 1. 物理存储 (Storage)：保留所有原始数据，用于“回滚”和“重算”
-    // map 自动按时间排序
     std::map<long long, std::vector<std::string>> storage;
     
     // 2. 逻辑视图 (Active View)：仅保存当前窗口内的有效数据，用于快速增减词频
@@ -32,18 +33,22 @@ private:
     // 实时词频统计 (对应 activeData)
     std::unordered_map<std::string, int> wordCounts;
 
+
+    SystemContext& ctx;
+
     mutable std::mutex mtx;
 
-    // 【新增】最大允许存储的条目数 (防止内存爆炸)
+    // 最大允许存储的条目数 (防止内存爆炸)
     // 假设每条数据平均占 1KB，50万条大约占用 500MB 内存，是一个比较安全的上限
     const size_t MAX_STORAGE_ENTRIES = 500000; 
 
 
 public:
-    SlidingWindow(long long windowSize = 600) : windowSizeSeconds(windowSize) {}
+    // 构造函数，接收 SystemContext 引用
+    SlidingWindow(long long windowSize, SystemContext& context) 
+        : windowSizeSeconds(windowSize), ctx(context) {}
 
     // --- 数据接入 ---
-    // 参数 vector<string> -> std::vector<std::string>
     void addData(long long timestamp, const std::vector<std::string>& words) {
         std::lock_guard<std::mutex> lock(mtx);
 
@@ -56,7 +61,7 @@ public:
 
         // 2. 存入物理存储 (Storage) - 只要不过期太久都存
         // 注意：这里处理乱序，如果 key 已存在则追加
-        auto storageIt = storage.find(timestamp); // auto 推导，底层是 std::map 迭代器
+        auto storageIt = storage.find(timestamp);
         if (storageIt == storage.end()) {
             storage[timestamp] = words;
         } else {
@@ -77,7 +82,7 @@ public:
 
         // 4. 执行淘汰 (逻辑淘汰 + 物理淘汰)
         evictOutdatedData();
-        evictOverLimitData(); // 【新增】基于内存/数量的强制淘汰
+        evictOverLimitData();
     }
 
     // --- 设置窗口大小 ---
@@ -91,7 +96,6 @@ public:
         
         windowSizeSeconds = newSizeSeconds;
         
-        // 【核心逻辑】完全重构视图 (Rebuild)
         // 1. 清空当前的统计和队列
         wordCounts.clear();
         activeData.clear();
@@ -127,7 +131,7 @@ public:
         return {startT, endT};
     }
 
-    // 趋势分析 (逻辑不变，基于 storage 计算)
+    // 趋势分析 (基于 storage 计算)
     std::vector<std::pair<std::string, double>> getTrendingWords(int topK) {
         std::lock_guard<std::mutex> lock(mtx);
         if (storage.empty()) return {};
@@ -160,7 +164,6 @@ public:
             if (score != 0) trends.push_back({word, score});
         }
 
-        // lambda 表达式保持不变，cmp 推导 std::pair 类型
         auto cmp = [](const std::pair<std::string, double>& a, const std::pair<std::string, double>& b) {
             return a.second > b.second; 
         };
@@ -206,7 +209,7 @@ public:
         currentTimeCursor = 0;
     }
 
-    // 【新增】设置最大保留时间 (Storage)
+    // 设置最大保留时间 (Storage)
     void setMaxRetention(long long seconds) {
         std::lock_guard<std::mutex> lock(mtx);
         
@@ -224,14 +227,14 @@ public:
         evictPhysicalStorage();
     }
 
-    // 【新增】获取当前保留时间 (供 UI 显示)
+    // 获取当前保留时间 (供 UI 显示)
     long long getMaxRetention() {
         std::lock_guard<std::mutex> lock(mtx);
         return maxRetentionSeconds;
     }
 
 private:
-    // 【新增】强制容量限制
+    // 强制容量限制
     void evictOverLimitData() {
         // 如果 storage map 的大小超过了限制
         while (storage.size() > MAX_STORAGE_ENTRIES) {
@@ -244,6 +247,9 @@ private:
             // 简单处理：仅从物理存储删除，防止 storage 无限膨胀
             // 如果用户此时把窗口拉大到覆盖这些被删除的数据，会发现数据缺失（这是预期的牺牲）
             storage.erase(storage.begin());
+
+            // 设置容量超限标志
+            ctx.capacityLimitEvictionOccurred = true; 
         }
         
         // 同时也检查一下 activeData (逻辑队列)，防止极端情况下队列过长
@@ -301,12 +307,20 @@ private:
         
         // map 是有序的，直接检查头部
         auto it = storage.begin();
+        // 一个flag，只要发生了一次删除，就设置
+        bool evicted = false; 
         while (it != storage.end()) {
             if (it->first <= physicalThreshold) {
                 it = storage.erase(it); // 返回下一个迭代器
+                evicted = true; // 标记发生了驱逐
             } else {
                 break; // 只要遇到一个没过期的，后面的肯定也没过期
             }
+        }
+
+        // 如果发生了驱逐，设置时间超限标志
+        if (evicted) {
+            ctx.timeLimitEvictionOccurred = true;
         }
     }
 };

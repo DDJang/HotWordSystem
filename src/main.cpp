@@ -11,6 +11,7 @@
 #include "SystemContext.h"
 #include "CommandExecutor.h"
 #include "APIServer.h"
+#include "SlidingWindow.h"
 
 int main() {
     #ifdef _WIN32

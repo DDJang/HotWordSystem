@@ -18,22 +18,16 @@ include_directories(
 # 2. 定义源文件
 # 主程序源文件
 set(MAIN_SOURCES "src/main.cpp")
-
-# --- 修改点 1: 更新测试代码的路径 ---
-# 测试程序源文件 (指向新的 test/unittest 目录)
+# 定义共享的 Context 源文件
+set(CONTEXT_SOURCE "src/SystemContext.cpp")
+# 测试程序源文件
 set(TEST_SOURCES "test/unittest/test_main.cpp")
 
-# 注意：如果你有在 src 下除了 main.cpp 以外的 .cpp 实现文件 (例如 src/algo.cpp)，
-# 你需要把它们也加到这里，或者定义一个 COMMON_SOURCES 变量供两个目标共用。
-# set(COMMON_SOURCES "src/algo.cpp" "src/utils.cpp")
-
 # 3. 生成主程序
-add_executable(HotWordSystem ${MAIN_SOURCES})
-# 如果有公共源文件: add_executable(HotWordSystem ${MAIN_SOURCES} ${COMMON_SOURCES})
+add_executable(HotWordSystem ${MAIN_SOURCES} ${CONTEXT_SOURCE})
 
 # 4. 生成单元测试程序
-add_executable(RunTests ${TEST_SOURCES})
-# 如果有公共源文件: add_executable(RunTests ${TEST_SOURCES} ${COMMON_SOURCES})
+add_executable(RunTests ${TEST_SOURCES} ${CONTEXT_SOURCE})
 
 # --- 针对 Windows 平台的特定配置 ---
 if(WIN32)
@@ -51,12 +45,19 @@ endif()
 # 复制 cppjieba 字典
 file(COPY ${CMAKE_SOURCE_DIR}/third_party/cppjieba/dict DESTINATION ${CMAKE_BINARY_DIR})
 
-# --- 修改点 2: 复制 testdata 到构建目录 ---
+# 6. 复制 Web 前端资源文件夹 ---
+# 这会将源码目录下的 web 文件夹完整复制到 build/web
+file(COPY ${CMAKE_SOURCE_DIR}/web DESTINATION ${CMAKE_BINARY_DIR})
+
+message(STATUS "已配置 Web 资源复制路径")
+
+# 7. 复制 testdata 到构建目录 ---
 # 这样在代码中读取文件时，可以使用相对路径 "./testdata/xxx.txt"
-# 如果 testdata 文件夹不存在，CMake 可能会报警告，这里加个判断（可选）
+# 如果 testdata 文件夹不存在，CMake 可能会报警告，这里加个判断
 if(EXISTS "${CMAKE_SOURCE_DIR}/test/testdata")
     file(COPY ${CMAKE_SOURCE_DIR}/test/testdata DESTINATION ${CMAKE_BINARY_DIR})
     message(STATUS "已复制 testdata 到构建目录")
 else()
     message(WARNING "未找到 test/testdata 目录，跳过复制")
 endif()
+

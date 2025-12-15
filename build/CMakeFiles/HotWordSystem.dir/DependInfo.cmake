@@ -8,6 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "D:/cppRepositories/HotWordSystem/src/SystemContext.cpp" "CMakeFiles/HotWordSystem.dir/src/SystemContext.cpp.obj" "gcc" "CMakeFiles/HotWordSystem.dir/src/SystemContext.cpp.obj.d"
   "D:/cppRepositories/HotWordSystem/src/main.cpp" "CMakeFiles/HotWordSystem.dir/src/main.cpp.obj" "gcc" "CMakeFiles/HotWordSystem.dir/src/main.cpp.obj.d"
   )
 

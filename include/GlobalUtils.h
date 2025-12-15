@@ -3,9 +3,9 @@
 #include <vector>
 #include <cstdio>
 #include <cstdlib>
-#include <limits>   // for numeric_limits
-#include <stdexcept> // for try-catch
-#include <random> // 1. 引入 <random> 头文件
+#include <limits>
+#include <stdexcept>
+#include <random>
 #include <sstream>
 
 class GlobalUtils {
@@ -47,12 +47,12 @@ public:
         return ss.str();
     }
 
-    // 【推荐升级】生成随机句子 (用于压测)
+    // 生成随机句子 (用于压测)
     static std::string generateRandomSentence() {
         // 使用静态变量，确保随机数引擎只被初始化一次
         static std::mt19937 gen(std::random_device{}()); 
 
-        // 稍微扩充一下词典，让结果更多样
+        // 词典
         static std::vector<std::string> dictionary = {
             "华为", "小米", "苹果", "OpenAI", "英伟达", "比特币", "特斯拉",
             "显卡", "暴跌", "上涨", "发布会", "财报", "AI", "大模型"
@@ -62,7 +62,7 @@ public:
         // 使用更精确的均匀分布来选择词语
         std::uniform_int_distribution<> dict_dist(0, dictionary.size() - 1);
         std::uniform_int_distribution<> verb_dist(0, verbs.size() - 1);
-        std::uniform_int_distribution<> len_dist(3, 8); // 句子长度也随机化
+        std::uniform_int_distribution<> len_dist(3, 8);
 
         std::string s = "";
         int len = len_dist(gen);
@@ -75,7 +75,7 @@ public:
         return s;
     }
 
-    // 【新增】安全转 Int，失败返回 defaultValue
+    // 安全转 Int，失败返回 defaultValue
     static int safeStoi(const std::string& str, int minVal, int maxVal, int defaultValue) {
         try {
             size_t idx;
@@ -90,7 +90,7 @@ public:
         }
     }
 
-    // 【新增】安全转 Long Long
+    // 安全转 Long Long，失败返回 defaultValue
     static long long safeStoll(const std::string& str, long long minVal, long long maxVal, long long defaultValue) {
         try {
             size_t idx;

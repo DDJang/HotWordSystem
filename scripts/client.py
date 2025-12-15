@@ -3,10 +3,11 @@ import time
 import random
 import json
 import sys
+import os
 
 # 配置
 SERVER_URL = "http://localhost:8080/api/command"
-DATA_FILE = "test_data.txt"
+DATA_FILE = os.path.join(os.path.dirname(__file__), "test_data.txt")
 MIN_DELAY = 0.5  # 最小间隔(秒)
 MAX_DELAY = 2.0  # 最大间隔(秒) - 模拟自然输入的不规律性
 

@@ -1,0 +1,26 @@
+[
+{
+  "directory": "D:/cppRepositories/HotWordSystem/build",
+  "command": "D:\\mingw64\\bin\\g++.exe -DNOMINMAX -DWIN32_LEAN_AND_MEAN @CMakeFiles/HotWordSystem.dir/includes_CXX.rsp -g -std=gnu++17 -o CMakeFiles\\HotWordSystem.dir\\src\\main.cpp.obj -c D:\\cppRepositories\\HotWordSystem\\src\\main.cpp",
+  "file": "D:/cppRepositories/HotWordSystem/src/main.cpp",
+  "output": "CMakeFiles/HotWordSystem.dir/src/main.cpp.obj"
+},
+{
+  "directory": "D:/cppRepositories/HotWordSystem/build",
+  "command": "D:\\mingw64\\bin\\g++.exe -DNOMINMAX -DWIN32_LEAN_AND_MEAN @CMakeFiles/HotWordSystem.dir/includes_CXX.rsp -g -std=gnu++17 -o CMakeFiles\\HotWordSystem.dir\\src\\SystemContext.cpp.obj -c D:\\cppRepositories\\HotWordSystem\\src\\SystemContext.cpp",
+  "file": "D:/cppRepositories/HotWordSystem/src/SystemContext.cpp",
+  "output": "CMakeFiles/HotWordSystem.dir/src/SystemContext.cpp.obj"
+},
+{
+  "directory": "D:/cppRepositories/HotWordSystem/build",
+  "command": "D:\\mingw64\\bin\\g++.exe -DNOMINMAX -DWIN32_LEAN_AND_MEAN @CMakeFiles/RunTests.dir/includes_CXX.rsp -g -std=gnu++17 -o CMakeFiles\\RunTests.dir\\test\\unittest\\test_main.cpp.obj -c D:\\cppRepositories\\HotWordSystem\\test\\unittest\\test_main.cpp",
+  "file": "D:/cppRepositories/HotWordSystem/test/unittest/test_main.cpp",
+  "output": "CMakeFiles/RunTests.dir/test/unittest/test_main.cpp.obj"
+},
+{
+  "directory": "D:/cppRepositories/HotWordSystem/build",
+  "command": "D:\\mingw64\\bin\\g++.exe -DNOMINMAX -DWIN32_LEAN_AND_MEAN @CMakeFiles/RunTests.dir/includes_CXX.rsp -g -std=gnu++17 -o CMakeFiles\\RunTests.dir\\src\\SystemContext.cpp.obj -c D:\\cppRepositories\\HotWordSystem\\src\\SystemContext.cpp",
+  "file": "D:/cppRepositories/HotWordSystem/src/SystemContext.cpp",
+  "output": "CMakeFiles/RunTests.dir/src/SystemContext.cpp.obj"
+}
+]

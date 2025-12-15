@@ -8,12 +8,14 @@
 #include <sstream>
 #include <chrono>
 #include <mutex>
+#include <map> 
 
 #include "httplib.h"
 #include "json.hpp"
 #include "SystemContext.h"
 #include "CommandExecutor.h"
 #include "GlobalUtils.h"
+#include "SlidingWindow.h"
 
 #ifdef _WIN32
 #include <direct.h>
@@ -22,7 +24,6 @@
 #define _getcwd getcwd
 #endif
 
-
 using json = nlohmann::json;
 
 class APIServer {
@@ -30,6 +31,9 @@ private:
     SystemContext& ctx;
     CommandExecutor& executor;
     httplib::Server svr;
+
+    // 静态资源搜索路径：优先 web/ 目录，兼顾构建目录结构
+    const std::vector<std::string> baseDirs = { "web/", "../web/", "./" };
 
 public:
     APIServer(SystemContext& context, CommandExecutor& exec) : ctx(context), executor(exec) {
@@ -42,23 +46,53 @@ public:
     }
 
 private:
-    void setupRoutes() {
-        // 1. 静态页面
-        svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
-            std::string path = "dashboard.html";
-            std::ifstream ifs(path);
-            if (!ifs.is_open()) {
-                path = "../dashboard.html"; 
-                ifs.open(path);
-            }
+    // 辅助：获取文件的 MIME 类型
+    std::string getMimeType(const std::string& path) {
+        if (path.find(".html") != std::string::npos) return "text/html";
+        if (path.find(".css") != std::string::npos) return "text/css";
+        if (path.find(".js") != std::string::npos) return "text/javascript";
+        if (path.find(".json") != std::string::npos) return "application/json";
+        if (path.find(".png") != std::string::npos) return "image/png";
+        if (path.find(".jpg") != std::string::npos) return "image/jpeg";
+        return "text/plain";
+    }
 
-            if(ifs.is_open()) {
+    // 辅助：尝试从配置的目录列表中读取文件内容
+    bool readFile(const std::string& filename, std::string& outContent) {
+        for (const auto& dir : baseDirs) {
+            std::string fullPath = dir + filename;
+            std::ifstream ifs(fullPath, std::ios::binary); // 二进制读取更安全
+            if (ifs.is_open()) {
                 std::stringstream buffer;
                 buffer << ifs.rdbuf();
-                res.set_content(buffer.str(), "text/html");
+                outContent = buffer.str();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void setupRoutes() {
+        // 1. 通用静态文件处理 (HTML, CSS, JS)
+        // 正则含义：匹配所有不以 /api/ 开头的路径
+        svr.Get(R"(^/(?!api/).*)", [&](const httplib::Request& req, httplib::Response& res) {
+            std::string path = req.path;
+            
+            // 默认首页
+            if (path == "/") path = "dashboard.html";
+            
+            // 去掉开头的 / (例如 /style.css -> style.css)
+            if (!path.empty() && path.front() == '/') path.erase(0, 1);
+
+            std::string content;
+            if (readFile(path, content)) {
+                res.set_content(content, getMimeType(path));
             } else {
-                char cwd[1024]; _getcwd(cwd, sizeof(cwd));
-                std::string err = "<h1>Error: dashboard.html not found!</h1><p>Current Dir: " + std::string(cwd) + "</p>";
+                // 文件未找到
+                char cwd[1024]; 
+                _getcwd(cwd, sizeof(cwd));
+                std::string err = "<h1>404 Not Found</h1><p>File '" + path + "' not found in web/ folder.</p><p>Current Dir: " + std::string(cwd) + "</p>";
+                res.status = 404;
                 res.set_content(err, "text/html");
             }
         });
@@ -78,10 +112,7 @@ private:
 
             auto topList = ctx.window->getTopK(k);
             auto range = ctx.window->getWindowRange();
-            
-            // 【修复】使用 .load() 来原子性地读取 atomic 变量的值
-            auto currentTs = ctx.lastTimestamp.load();
-            
+            auto currentTs = ctx.lastTimestamp.load();            
             auto retentionSec = ctx.window->getMaxRetention();
 
             json j;
@@ -98,6 +129,13 @@ private:
             j["current_ts"] = GlobalUtils::formatTime(currentTs);
             j["retention_sec"] = retentionSec;
 
+
+            bool capacityEvicted = ctx.capacityLimitEvictionOccurred.exchange(false);
+            bool timeEvicted = ctx.timeLimitEvictionOccurred.exchange(false);
+
+            j["capacity_limit_evicted"] = capacityEvicted;
+            j["time_limit_evicted"] = timeEvicted;
+
             res.set_header("Access-Control-Allow-Origin", "*");
             res.set_content(j.dump(), "application/json");
         });
@@ -107,24 +145,32 @@ private:
             try {
                 auto j = json::parse(req.body);
                 std::string cmd = j["cmd"];
-                std::cout << "[Web Command] " << cmd << std::endl;
+                // 【优化】不再打印状态查询指令，避免刷屏
+                if (cmd.find("BENCHMARK_STATUS") == std::string::npos) {
+                    std::cout << "[Web Command] " << cmd << std::endl;
+                }
                 
                 std::string output = executor.process(cmd);
                 
-                json resp;
-                resp["status"] = "ok";
-                resp["message"] = output;
-
-                // 【修复】使用 .load() 来原子性地读取。虽然隐式转换可能有效，但显式调用 .load() 更安全、更清晰。
-                resp["timestamp"] = GlobalUtils::formatTime(ctx.lastTimestamp.load());
-
-                res.set_content(resp.dump(), "application/json");
+                // 检查 output 是否是 JSON
+                if (!output.empty() && output.front() == '{') {
+                    // 如果是 JSON (来自状态查询)，直接返回
+                    res.set_content(output, "application/json");
+                } else {
+                    // 否则，按原逻辑包装
+                    json resp;
+                    resp["status"] = "ok";
+                    resp["message"] = output;
+                    resp["timestamp"] = GlobalUtils::formatTime(ctx.lastTimestamp.load());
+                    res.set_content(resp.dump(), "application/json");
+                }
 
                 if (ctx.shouldExit) {
                     std::thread([&](){
                         std::this_thread::sleep_for(std::chrono::milliseconds(500));
                         std::cout << "[System] Shutting down from web request..." << std::endl;
                         svr.stop();
+                        std::exit(0); // 强制退出
                     }).detach();
                 }
             } catch (...) {
@@ -159,6 +205,7 @@ private:
                 j["sensitive_words"] = ctx.processor->getSensitiveWords();
                 j["allow_all"] = ctx.processor->isAllowAllPos();
                 j["allow_sensitive"] = ctx.processor->isAllowAllSensitive();
+                j["tags"] = ctx.processor->getAllowedTags(); 
             }
             res.set_content(j.dump(), "application/json");
         });
@@ -172,8 +219,15 @@ private:
                 
                 if (j.contains("tags") || j.contains("allow_all")) {
                     std::vector<std::string> tags;
-                    bool allowAll = j.value("allow_all", ctx.processor->isAllowAllPos());
-                    if (j.contains("tags")) tags = j["tags"].get<std::vector<std::string>>();
+                    // 如果前端没传 allow_all，则获取当前状态
+                    bool allowAll = j.contains("allow_all") ? j["allow_all"].get<bool>() : ctx.processor->isAllowAllPos();
+                    
+                    if (j.contains("tags")) {
+                        tags = j["tags"].get<std::vector<std::string>>();
+                    } else {
+                        // 如果前端只传了 allow_all 没传 tags，保持原 tags
+                        tags = ctx.processor->getAllowedTags();
+                    }
                     ctx.processor->setPosConfig(tags, allowAll);
                 }
 
@@ -187,8 +241,6 @@ private:
                 json resp;
                 resp["status"] = "ok";
                 resp["message"] = "Config updated";
-
-                // 【修复】同样，这里也使用 .load()
                 resp["timestamp"] = GlobalUtils::formatTime(ctx.lastTimestamp.load());
 
                 res.set_content(resp.dump(), "application/json");

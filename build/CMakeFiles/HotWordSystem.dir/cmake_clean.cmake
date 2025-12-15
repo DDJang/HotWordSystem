@@ -1,4 +1,6 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/HotWordSystem.dir/src/SystemContext.cpp.obj"
+  "CMakeFiles/HotWordSystem.dir/src/SystemContext.cpp.obj.d"
   "CMakeFiles/HotWordSystem.dir/src/main.cpp.obj"
   "CMakeFiles/HotWordSystem.dir/src/main.cpp.obj.d"
   "HotWordSystem.exe"
