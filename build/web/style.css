@@ -1015,7 +1015,7 @@ input:checked+.slider:before {
 
 
 
-/* style.css -> 替换所有 #right-col-header 相关的旧样式 */
+/*  #right-col-header 相关的样式 */
 /* 1. Header 容器本身：现在只负责布局，并通过 padding-bottom 创建“羽化区” */
 #right-col-header {
     position: sticky;
@@ -1027,15 +1027,16 @@ input:checked+.slider:before {
     /* 这确保了日志框等内容绝对不会进入羽化区域 */
     padding: 15px 20px 40px 20px; 
 }
+
 /* 2. 背景伪元素：在这里应用所有视觉效果 */
 #right-col-header::before {
     content: '';
     position: absolute;
-    inset: 0;
-    z-index: -1;
+    inset: 0; /* 等同于 top:0; right:0; bottom:0; left:0; */
+    z-index: -1; /* 将伪元素置于内容（标题、按钮）的下方 */
 
     /* 保持您想要的强大模糊效果 */
-    background: rgba(243, 244, 246, 0.85);
+    background: rgba(243, 244, 246, 0.85); /* 半透明背景色 */
     -webkit-backdrop-filter: blur(24px);
     backdrop-filter: blur(24px);
 
@@ -1048,6 +1049,7 @@ input:checked+.slider:before {
     -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
     mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
 }
+
 /* 3. 标题行的下边距，使其与日志框分开 */
 #right-col-header-top-row {
     margin-bottom: 15px;
