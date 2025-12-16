@@ -4,28 +4,28 @@ var feedbackTimer = null;
 var isHistoryMode = false;
 var wordToRemove = null; // 用于存储待删除的敏感词
 var historyWindowText = "";
-var benchmarkPollTimer = null; // 【新增】用于存放轮询定时器的ID
+var benchmarkPollTimer = null; // 用于存放轮询定时器的ID
 
 var myChart = echarts.init(document.getElementById('mainChart'));
 myChart.setOption({
     tooltip: {
         trigger: 'axis',
 
-        // 1. 背景色设为半透明白色 (不再是黑色)
+        // 1. 背景色设为半透明白色
         backgroundColor: 'rgba(255, 255, 255, 0.6)',
 
         // 2. 边框颜色 (玻璃边缘的高光)
         borderColor: 'rgba(255, 255, 255, 0.8)',
         borderWidth: 1,
 
-        // 3. 文字颜色改为深色 (因为背景变亮了)
+        // 3. 文字颜色改为深色
         textStyle: {
             color: '#1f2937', // 深灰色文字
             fontSize: 13,
             fontWeight: 600
         },
 
-        // 4. 【核心】注入 CSS 实现磨砂玻璃 + 液态阴影效果
+        // 4. 注入 CSS 实现磨砂玻璃 + 液态阴影效果
         extraCssText: `
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
@@ -121,8 +121,7 @@ function showNotification(title, message, type = 'warning', duration = 5000) {
     // 挂载关闭方法
     toast.close = closeToast;
 
-    // 【修改点】不再创建 button，直接填入内容
-    // 点击卡片本身也可以关闭（可选，增加交互性）
+    // 点击弹窗时关闭
     toast.onclick = closeToast;
     toast.style.cursor = 'pointer'; // 让鼠标变成手型，提示可点击关闭
 
@@ -496,7 +495,7 @@ function updateRetention() {
     const retMinHardcoded = parseInt(retSizeInput.min); // Storage 的硬编码最小值 (e.g., 600)
     const retMaxHardcoded = parseInt(retSizeInput.max); // Storage 的硬编码最大值 (e.g., 2592000)
 
-    // 3. 【核心修复】预检查：Window 的值是否已经超过了系统允许的最大值？
+    // 3. 预检查：Window 的值是否已经超过了系统允许的最大值？
     if (winSize > retMaxHardcoded) {
         showNotification(
             '操作无效',
@@ -522,30 +521,57 @@ function updateRetention() {
 }
 
 function sendManualData() {
-    const val = document.getElementById('manualInput').value;
-    if (val) {
-        apiPost('/api/command', { cmd: val });
-        document.getElementById('manualInput').value = "";
-        showNotification('数据发送', '模拟数据/指令已发送至服务器', 'success');
+    const inputEl = document.getElementById('manualInput');
+    const val = inputEl.value; // 获取原始值
 
-        // 【新增】检查是否为 SHUTDOWN 指令
-        const shutdownRegex = /\[ACTION\]\s+SHUTDOWN/i;
-        if (shutdownRegex.test(val)) {
-            setTimeout(() => {
-                document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
-            }, 1000);
-        }
+    // 检查是否为空（去除首尾空格）
+    if (!val || val.trim() === "") {
+        showNotification('输入为空', '请输入模拟数据或控制指令后再发送。', 'warning');
+        return;
+    }
+
+    // 发送数据
+    apiPost('/api/command', { cmd: val });
+    
+    // 清空输入框
+    inputEl.value = ""; 
+    
+    showNotification('数据发送', '模拟数据/指令已发送至服务器', 'success');
+
+    // 检查是否为 SHUTDOWN 指令
+    const shutdownRegex = /\[ACTION\]\s+SHUTDOWN/i;
+    if (shutdownRegex.test(val)) {
+        setTimeout(() => {
+            document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;color:#555;'><h1>🚫 系统已关闭</h1><p>连接已断开，请手动重启服务。</p></div>";
+        }, 1000);
     }
 }
 
 function addSensitive() {
-    const w = document.getElementById('newSensitive').value;
-    if (w) {
-        apiPost('/api/config', { add_sensitive: w });
-        document.getElementById('newSensitive').value = "";
-        setTimeout(loadConfigState, 500);
-        showNotification('屏蔽词添加成功', `已将 "${w}" 加入屏蔽列表。`, 'success');
+    const inputEl = document.getElementById('newSensitive');
+    const w = inputEl.value.trim(); // 获取值并去除首尾空格
+
+    // 检查是否为空
+    if (!w) {
+        showNotification('输入为空', '请输入您想要屏蔽的敏感词。', 'warning');
+        return;
     }
+
+    // 检查长度是否超过10
+    if (w.length > 10) {
+        showNotification('格式错误', '敏感词长度不能超过 10 个字符。', 'danger');
+        return;
+    }
+
+    // 发送请求
+    apiPost('/api/config', { add_sensitive: w });
+    
+    // 清空输入框
+    inputEl.value = ""; 
+    
+    // 刷新配置并显示成功提示
+    setTimeout(loadConfigState, 500);
+    showNotification('屏蔽词添加成功', `已将 "${w}" 加入屏蔽列表。`, 'success');
 }
 function removeSensitive(w) {
     // 1. 将待删除的词存到全局变量
@@ -569,7 +595,7 @@ function viewHistory() {
 
     const k = document.getElementById('displayK').value || 10;
 
-    // 2. 【核心修正】立即更新 UI 和全局状态，提供即时反馈
+    // 2. 立即更新 UI 和全局状态，提供即时反馈
     isHistoryMode = true; // 更新状态
     const toggleButton = document.getElementById('historyToggleButton');
     toggleButton.textContent = '返回实时'; // 改变文字
@@ -618,7 +644,7 @@ function viewHistory() {
 
 
 function backToRealtime() {
-    // 1. 【核心修正】立即更新 UI 和全局状态
+    // 1. 立即更新 UI 和全局状态
     isHistoryMode = false;
     const toggleButton = document.getElementById('historyToggleButton');
     toggleButton.textContent = '回放图表'; // 恢复文字
@@ -842,7 +868,7 @@ function executeReset() {
             document.getElementById('trendBody').innerHTML = "";
             document.getElementById('windowInfo').innerText = "Window: [Reset] | Now: 00:00:00";
 
-            // === 【核心修正】 ===
+
             // 1. 获取正确的、合并后的新按钮
             const toggleButton = document.getElementById('historyToggleButton');
 
