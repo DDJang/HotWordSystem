@@ -5,25 +5,67 @@
 }
 
 
+/* 1. 清理 Body，只保留背景和基础属性 */
 body {
     font-family: 'Segoe UI', sans-serif;
-    display: flex;
-    gap: 20px;
-    padding: 20px;
+    margin: 0; /* 去掉默认 margin */
+    padding: 0; /* 去掉 padding，交给 main-view 处理 */
     height: 100vh;
-    box-sizing: border-box;
     overflow: hidden;
     color: #1f2937;
-
-    /* === 【核心】明亮的动态渐变背景 === */
-    /* 1. 定义一个由多种柔和色彩组成的巨大渐变背景 */
+    
+    /* 保持原来的动态背景 */
     background: linear-gradient(-45deg, #e0f7fa, #f3e5f5, #fff3e0, #e8f5e9);
-    
-    /* 2. 将背景尺寸扩大4倍，这样我们才有移动的空间 */
     background-size: 400% 400%;
-    
-    /* 3. 应用下面定义的动画 */
     animation: moveGradient 15s ease infinite;
+
+    /* 【关键】设置透视距离，让 3D 变换更有立体感 */
+    perspective: 1200px; 
+    background-color: #000; /* 防止缩放露底时看到白色 */
+}
+
+/* 2. 定义主视图容器 (继承原本 body 的布局) */
+#main-view {
+    display: flex;
+    gap: 20px;
+    padding: 20px; /* 原本 body 的 padding 移到这里 */
+    height: 100vh;
+    box-sizing: border-box;
+    width: 100%;
+    
+    /* 【核心动画属性】 */
+    transition: 
+        transform 0.5s cubic-bezier(0.32, 0.72, 0, 1), /* iOS 风格的弹簧曲线 */
+        border-radius 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+        filter 0.5s ease;
+        
+    transform-origin: center top; /* 从顶部中心开始缩放 */
+    background: transparent; /* 保持透明，透出 body 的背景 */
+    
+    /* 初始状态：无圆角或小圆角 */
+    border-radius: 0; 
+}
+
+/* 3. 当 Body 拥有 .has-modal 类时，主视图下沉 */
+body.has-modal #main-view {
+    /* 动作：缩小(0.92) + 下移(30px) + 略微旋转(-1度增加动感) */
+    transform: scale(0.92) translateY(30px) rotateX(1deg);
+    
+    /* 视觉：变暗 + 变模糊 + 大圆角 */
+    filter: brightness(0.9) blur(1px); 
+    border-radius: 24px; /* 变成卡片状 */
+    
+    /* 交互：禁止点击背景内容 */
+    pointer-events: none; 
+    
+    /* 细节：添加一个白色光晕边框，模拟玻璃边缘 */
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.2); 
+    overflow: hidden; /* 裁剪圆角内容 */
+}
+
+/* 修复：确保弹窗的 z-index 足够高，且不受 transform 影响 */
+.modal-overlay {
+    z-index: 2000;
 }
 
 .left-col {

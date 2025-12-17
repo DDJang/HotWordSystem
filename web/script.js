@@ -1030,3 +1030,46 @@ function showHistoryReportInfo() {
     `;
     showInfoModal(title, htmlContent);
 }
+
+
+// ==========================================
+// == 全局背景下沉特效控制逻辑 ==
+// ==========================================
+
+/**
+ * 检查当前是否有任何弹窗处于开启状态
+ * 并根据状态切换 body 的 class
+ */
+function updateBackgroundEffect() {
+    // 稍微延迟一点点，等待 classList 变化完成
+    setTimeout(() => {
+        // 查找所有包含 'show' 类的模态框
+        const openModals = document.querySelectorAll('.modal-overlay.show');
+        
+        if (openModals.length > 0) {
+            document.body.classList.add('has-modal');
+        } else {
+            document.body.classList.remove('has-modal');
+        }
+    }, 10);
+}
+
+// === 核心逻辑注入 ===
+// 我们使用 MutationObserver 自动监听所有弹窗的变化
+// 这样您就不需要修改每一个 showStats/closeStats 函数了！
+const observerConfig = { attributes: true, attributeFilter: ['class'] };
+const modalObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+            updateBackgroundEffect();
+        }
+    });
+});
+
+// 启动监听所有模态框
+document.addEventListener('DOMContentLoaded', () => {
+    const modals = document.querySelectorAll('.modal-overlay');
+    modals.forEach(modal => {
+        modalObserver.observe(modal, observerConfig);
+    });
+});

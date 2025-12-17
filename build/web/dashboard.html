@@ -15,283 +15,289 @@
     <!-- 【新增】通知容器 -->
     <div id="notification-container" class="notification-container"></div>
 
-    <div class="left-col">
-        <div class="card chart-box">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h2>🔥 实时热词榜</h2>
-                <div id="windowInfo">Window: [Wait...]</div>
+    <div id="main-view">
+        <div class="left-col">
+            <div class="card chart-box">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2>🔥 实时热词榜</h2>
+                    <div id="windowInfo">Window: [Wait...]</div>
+                </div>
+
+                <div id="history-mode-overlay" class="history-overlay">
+                    📂 历史回放模式：图表已冻结，不会实时更新。
+                </div>
+
+                <div id="mainChart" style="width:100%; height:90%;"></div>
+
+                <div id="chart-state-overlay" class="state-overlay"> <!-- class 已修改 -->
+                    <div class="spinner"></div>
+                    <p>正在加载数据...</p>
+                </div>
             </div>
 
-            <div id="history-mode-overlay" class="history-overlay">
-                📂 历史回放模式：图表已冻结，不会实时更新。
+            <!-- 【新增】一个容器，用于平分下半部分空间 -->
+            <div class="bottom-row-container">
+
+                <!-- 1. 这是您原来的“趋势分析”模块 -->
+                <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                        <h2 style="margin:0;">📈 趋势分析</h2>
+                    </div>
+                    <div style="overflow-y: auto; flex: 1;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>热词</th>
+                                    <th>趋势分</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trendBody"></tbody>
+                        </table>
+
+                        <!-- 【新增】趋势分析的状态遮罩层 -->
+                        <div id="trend-state-overlay" class="state-overlay">
+                            <!-- 注意：这里默认没有 spinner，因为趋势通常是瞬时更新的 -->
+                            <p>📈<br>暂无趋势数据</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 这是我们移过来的“数据模拟”模块，并调整了内部UI -->
+                <div class="control-group" id="data-simulation-panel-left">
+                    <h2 style="margin:0; margin-bottom: 10px;">📝 数据模拟</h2>
+
+                    <!-- 【核心UI调整】上下布局 -->
+                    <div class="data-simulation-layout-vertical">
+                        <div class="textarea-container">
+                            <textarea id="manualInput" placeholder="在此输入单行或多行模拟数据..."></textarea>
+                        </div>
+
+                        <!-- 【新增】一个用于放置底部按钮的行容器 -->
+                        <div class="bottom-buttons-row">
+                            <button onclick="sendManualData()">发送数据</button>
+                            <button onclick="document.getElementById('fileUploader').click()"
+                                class="secondary">上传文件</button>
+                            <input type="file" id="fileUploader" style="display: none;" onchange="uploadFile(event)">
+                        </div>
+                    </div>
+
+                </div>
             </div>
 
-            <div id="mainChart" style="width:100%; height:90%;"></div>
 
-            <div id="chart-state-overlay" class="state-overlay"> <!-- class 已修改 -->
-                <div class="spinner"></div>
-                <p>正在加载数据...</p>
-            </div>
         </div>
 
-        <!-- 【新增】一个容器，用于平分下半部分空间 -->
-        <div class="bottom-row-container">
+        <div class="right-col">
 
-            <!-- 1. 这是您原来的“趋势分析”模块 -->
-            <div class="card" style="flex: 1; display: flex; flex-direction: column;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
-                    <h2 style="margin:0;">📈 趋势分析</h2>
-                </div>
-                <div style="overflow-y: auto; flex: 1;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>热词</th>
-                                <th>趋势分</th>
-                                <th>状态</th>
-                            </tr>
-                        </thead>
-                        <tbody id="trendBody"></tbody>
-                    </table>
-
-                    <!-- 【新增】趋势分析的状态遮罩层 -->
-                    <div id="trend-state-overlay" class="state-overlay">
-                        <!-- 注意：这里默认没有 spinner，因为趋势通常是瞬时更新的 -->
-                        <p>📈<br>暂无趋势数据</p>
+            <!-- 这是您原来的 Header，保持不变 -->
+            <div id="right-col-header">
+                <div id="right-col-header-top-row">
+                    <h2 style="margin: 0;">🎮 控制台</h2>
+                    <div class="header-icon-buttons">
+                        <div class="stats-btn-header" onclick="showStats()" title="查看性能指标">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M4 12H2V20H4V12Z" />
+                                <path d="M12 8H10V20H12V8Z" />
+                                <path d="M20 4H18V20H20V4Z" />
+                            </svg>
+                        </div>
+                        <div class="reset-btn-header" onclick="resetSystem()" title="清空所有数据">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                            </svg>
+                        </div>
+                        <div class="shutdown-btn-header" onclick="shutdownSystem()" title="终止程序">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                                <line x1="12" y1="2" x2="12" y2="12"></line>
+                            </svg>
+                        </div>
                     </div>
+                </div>
+                <div>
+                    <div id="log">Connecting to server...</div>
                 </div>
             </div>
 
-            <!-- 2. 这是我们移过来的“数据模拟”模块，并调整了内部UI -->
-            <div class="control-group" id="data-simulation-panel-left">
-                <h2 style="margin:0; margin-bottom: 10px;">📝 数据模拟</h2>
 
-                <!-- 【核心UI调整】上下布局 -->
-                <div class="data-simulation-layout-vertical">
-                    <div class="textarea-container">
-                        <textarea id="manualInput" placeholder="在此输入单行或多行模拟数据..."></textarea>
+            <!-- ============================================= -->
+            <!-- ========= 从这里开始是重新排序的模块 ========= -->
+            <!-- ============================================= -->
+
+
+
+            <!-- 2. 词性过滤 (Processing Rule) -->
+            <div class="control-group">
+                <div class="header-row">
+                    <h3>🏷️ 词性过滤</h3>
+                    <div class="header-toggle-group">
+                        <span class="toggle-label-sm">启用过滤</span>
+                        <label class="switch sm">
+                            <input type="checkbox" id="cb_filter_pos_enable" onchange="togglePosFilter(this)">
+                            <span class="slider round"></span>
+                        </label>
                     </div>
-
-                    <!-- 【新增】一个用于放置底部按钮的行容器 -->
-                    <div class="bottom-buttons-row">
-                        <button onclick="sendManualData()">发送数据</button>
-                        <button onclick="document.getElementById('fileUploader').click()"
-                            class="secondary">上传文件</button>
-                        <input type="file" id="fileUploader" style="display: none;" onchange="uploadFile(event)">
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-
-    </div>
-
-    <div class="right-col">
-
-        <!-- 这是您原来的 Header，保持不变 -->
-        <div id="right-col-header">
-            <div id="right-col-header-top-row">
-                <h2 style="margin: 0;">🎮 控制台</h2>
-                <div class="header-icon-buttons">
-                    <div class="stats-btn-header" onclick="showStats()" title="查看性能指标">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 12H2V20H4V12Z" />
-                            <path d="M12 8H10V20H12V8Z" />
-                            <path d="M20 4H18V20H20V4Z" />
+                    <div class="info-trigger" onclick="showPosInfo()" title="查看说明">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
                         </svg>
                     </div>
-                    <div class="reset-btn-header" onclick="resetSystem()" title="清空所有数据">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="23 4 23 10 17 10"></polyline>
-                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </div>
+                <div id="posConfigArea" class="config-section">
+                    <div class="tag-container">
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="n"
+                                onchange="updateConfig()"><span class="tag-chip">名词</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="nr"
+                                onchange="updateConfig()"><span class="tag-chip">人名</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="nz"
+                                onchange="updateConfig()"><span class="tag-chip">其他专名</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="ns"
+                                onchange="updateConfig()"><span class="tag-chip">地名</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="nt"
+                                onchange="updateConfig()"><span class="tag-chip">机构</span></label>
+                    </div>
+                    <div class="tag-container" style="margin-top: 12px;">
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="v"
+                                onchange="updateConfig()"><span class="tag-chip">动词</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="vn"
+                                onchange="updateConfig()"><span class="tag-chip">名动词</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="a"
+                                onchange="updateConfig()"><span class="tag-chip">形容词</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="eng"
+                                onchange="updateConfig()"><span class="tag-chip">英文</span></label>
+                        <label><input type="checkbox" class="tag-chip-input pos-item" value="i"
+                                onchange="updateConfig()"><span class="tag-chip">成语</span></label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 敏感词过滤 (Processing Rule) -->
+            <div class="control-group">
+                <div class="header-row">
+                    <h3>🛡️ 敏感词过滤</h3>
+                    <div class="header-toggle-group">
+                        <span class="toggle-label-sm">启用过滤</span>
+                        <label class="switch sm">
+                            <input type="checkbox" id="cb_filter_sensitive_enable"
+                                onchange="toggleSensitiveFilter(this)">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="info-trigger" onclick="showSensitiveInfo()" title="查看说明">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
                         </svg>
                     </div>
-                    <div class="shutdown-btn-header" onclick="shutdownSystem()" title="终止程序">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
-                            <line x1="12" y1="2" x2="12" y2="12"></line>
+                </div>
+                <div id="sensitiveConfigArea" class="config-section">
+                    <div class="row input-group-interactive">
+                        <input type="text" id="newSensitive" placeholder="添加屏蔽词...">
+                        <button onclick="addSensitive()">确认添加</button>
+                    </div>
+                    <div id="sensitiveList" class="tag-container" style="margin-top: 10px;"></div>
+                </div>
+            </div>
+
+            <!-- 4. 视图设置 (Real-time View) -->
+            <div class="control-group">
+                <div class="header-row">
+                    <h3>⏳ 视图设置</h3>
+                    <div class="info-trigger" onclick="showConfigInfo()" title="查看配置详情">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
                         </svg>
                     </div>
                 </div>
+                <div class="dual-input compact">
+                    <label>窗口大小</label>
+                    <input type="number" id="winSize" class="mini-input" value="600" min="1" max="2592000">
+                    <span class="unit">秒</span>
+                    <button onclick="updateWindowSize()" class="btn-xs">应用</button>
+                </div>
+                <div class="dual-input compact">
+                    <label>存储上限</label>
+                    <input type="number" id="retSize" class="mini-input" value="6000" min="600" max="2592000">
+                    <span class="unit">秒</span>
+                    <button onclick="updateRetention()" class="btn-xs">应用</button>
+                </div>
+                <div class="dual-input compact">
+                    <label>趋势阈值</label>
+                    <input type="number" id="trendThreshold" class="mini-input" value="2" min="0" step="0.1">
+                    <span class="unit">分</span>
+                    <div style="width: 50px;"></div>
+                </div>
+                <div class="dual-input compact">
+                    <label>显示数量</label>
+                    <input type="number" id="displayK" class="mini-input" value="10" min="1" max="100">
+                    <span class="unit">个</span>
+                    <div style="width: 50px;"></div>
+                </div>
             </div>
-            <div>
-                <div id="log">Connecting to server...</div>
+
+            <!-- 5. 历史回放 (History & Analysis) -->
+            <div class="control-group">
+                <div class="header-row">
+                    <h3>📂 历史回放</h3>
+                    <div class="info-trigger" onclick="showHistoryReportInfo()" title="查看说明">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                    </div>
+                </div>
+                <div class="row history-input-row">
+                    <div class="history-input-group">
+                        <span>起始</span>
+                        <input type="text" id="histStart" value="00:00:00" placeholder="HH:MM:SS" maxlength="8">
+                    </div>
+                    <div class="history-input-group">
+                        <span>终止</span>
+                        <input type="text" id="histEnd" value="00:10:00" placeholder="HH:MM:SS" maxlength="8">
+                    </div>
+                </div>
+                <div class="row" style="margin-top: 8px;">
+                    <button id="historyToggleButton" onclick="toggleHistoryMode()" class="purple">
+                        回放图表
+                    </button>
+                    <button onclick="genReport()" class="secondary">导出历史报告</button>
+                </div>
             </div>
+
+            <!-- 6. 压力测试 (System Tool) -->
+            <div class="control-group">
+                <h3>⚡ 压力测试</h3>
+                <div class="dual-input compact">
+                    <label style="width: 110px;">数据量</label>
+                    <input type="number" id="benchN" class="mini-input" value="1000" min="1" max="100000">
+                    <span class="unit">条</span>
+                    <div style="width: 50px;"></div>
+                </div>
+                <div class="row" style="margin-top: 12px;">
+                    <button id="benchmarkToggleButton" onclick="toggleBenchmarkMode()">启动测试</button>
+                </div>
+            </div>
+
         </div>
-
-
-        <!-- ============================================= -->
-        <!-- ========= 从这里开始是重新排序的模块 ========= -->
-        <!-- ============================================= -->
-
-
-
-        <!-- 2. 词性过滤 (Processing Rule) -->
-        <div class="control-group">
-            <div class="header-row">
-                <h3>🏷️ 词性过滤</h3>
-                <div class="header-toggle-group">
-                    <span class="toggle-label-sm">启用过滤</span>
-                    <label class="switch sm">
-                        <input type="checkbox" id="cb_filter_pos_enable" onchange="togglePosFilter(this)">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <div class="info-trigger" onclick="showPosInfo()" title="查看说明">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
-                </div>
-            </div>
-            <div id="posConfigArea" class="config-section">
-                <div class="tag-container">
-                    <label><input type="checkbox" class="tag-chip-input pos-item" value="n"
-                            onchange="updateConfig()"><span class="tag-chip">名词</span></label>
-                    <label><input type="checkbox" class="tag-chip-input pos-item" value="nr"
-                            onchange="updateConfig()"><span class="tag-chip">人名</span></label>
-                    <label><input type="checkbox" class="tag-chip-input pos-item" value="nz"
-                            onchange="updateConfig()"><span class="tag-chip">其他专名</span></label>
-                    <label><input type="checkbox" class="tag-chip-input pos-item" value="ns"
-                            onchange="updateConfig()"><span class="tag-chip">地名</span></label>
-                    <label><input type="checkbox" class="tag-chip-input pos-item" value="nt"
-                            onchange="updateConfig()"><span class="tag-chip">机构</span></label>
-                </div>
-                <div class="tag-container" style="margin-top: 12px;">
-                    <label><input type="checkbox" class="tag-chip-input pos-item" value="v"
-                            onchange="updateConfig()"><span class="tag-chip">动词</span></label>
-                    <label><input type="checkbox" class="tag-chip-input pos-item" value="vn"
-                            onchange="updateConfig()"><span class="tag-chip">名动词</span></label>
-                    <label><input type="checkbox" class="tag-chip-input pos-item" value="a"
-                            onchange="updateConfig()"><span class="tag-chip">形容词</span></label>
-                    <label><input type="checkbox" class="tag-chip-input pos-item" value="eng"
-                            onchange="updateConfig()"><span class="tag-chip">英文</span></label>
-                    <label><input type="checkbox" class="tag-chip-input pos-item" value="i"
-                            onchange="updateConfig()"><span class="tag-chip">成语</span></label>
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. 敏感词过滤 (Processing Rule) -->
-        <div class="control-group">
-            <div class="header-row">
-                <h3>🛡️ 敏感词过滤</h3>
-                <div class="header-toggle-group">
-                    <span class="toggle-label-sm">启用过滤</span>
-                    <label class="switch sm">
-                        <input type="checkbox" id="cb_filter_sensitive_enable" onchange="toggleSensitiveFilter(this)">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <div class="info-trigger" onclick="showSensitiveInfo()" title="查看说明">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
-                </div>
-            </div>
-            <div id="sensitiveConfigArea" class="config-section">
-                <div class="row input-group-interactive">
-                    <input type="text" id="newSensitive" placeholder="添加屏蔽词...">
-                    <button onclick="addSensitive()">确认添加</button>
-                </div>
-                <div id="sensitiveList" class="tag-container" style="margin-top: 10px;"></div>
-            </div>
-        </div>
-
-        <!-- 4. 视图设置 (Real-time View) -->
-        <div class="control-group">
-            <div class="header-row">
-                <h3>⏳ 视图设置</h3>
-                <div class="info-trigger" onclick="showConfigInfo()" title="查看配置详情">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
-                </div>
-            </div>
-            <div class="dual-input compact">
-                <label>窗口大小</label>
-                <input type="number" id="winSize" class="mini-input" value="600" min="1" max="2592000">
-                <span class="unit">秒</span>
-                <button onclick="updateWindowSize()" class="btn-xs">应用</button>
-            </div>
-            <div class="dual-input compact">
-                <label>存储上限</label>
-                <input type="number" id="retSize" class="mini-input" value="6000" min="600" max="2592000">
-                <span class="unit">秒</span>
-                <button onclick="updateRetention()" class="btn-xs">应用</button>
-            </div>
-            <div class="dual-input compact">
-                <label>趋势阈值</label>
-                <input type="number" id="trendThreshold" class="mini-input" value="2" min="0" step="0.1">
-                <span class="unit">分</span>
-                <div style="width: 50px;"></div>
-            </div>
-            <div class="dual-input compact">
-                <label>显示数量</label>
-                <input type="number" id="displayK" class="mini-input" value="10" min="1" max="100">
-                <span class="unit">个</span>
-                <div style="width: 50px;"></div>
-            </div>
-        </div>
-
-        <!-- 5. 历史回放 (History & Analysis) -->
-        <div class="control-group">
-            <div class="header-row">
-                <h3>📂 历史回放</h3>
-                <div class="info-trigger" onclick="showHistoryReportInfo()" title="查看说明">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
-                </div>
-            </div>
-            <div class="row history-input-row">
-                <div class="history-input-group">
-                    <span>起始</span>
-                    <input type="text" id="histStart" value="00:00:00" placeholder="HH:MM:SS" maxlength="8">
-                </div>
-                <div class="history-input-group">
-                    <span>终止</span>
-                    <input type="text" id="histEnd" value="00:10:00" placeholder="HH:MM:SS" maxlength="8">
-                </div>
-            </div>
-            <div class="row" style="margin-top: 8px;">
-                <button id="historyToggleButton" onclick="toggleHistoryMode()" class="purple">
-                    回放图表
-                </button>
-                <button onclick="genReport()" class="secondary">导出历史报告</button>
-            </div>
-        </div>
-
-        <!-- 6. 压力测试 (System Tool) -->
-        <div class="control-group">
-            <h3>⚡ 压力测试</h3>
-            <div class="dual-input compact">
-                <label style="width: 110px;">数据量</label>
-                <input type="number" id="benchN" class="mini-input" value="1000" min="1" max="100000">
-                <span class="unit">条</span>
-                <div style="width: 50px;"></div>
-            </div>
-            <div class="row" style="margin-top: 12px;">
-                <button id="benchmarkToggleButton" onclick="toggleBenchmarkMode()">启动测试</button>
-            </div>
-        </div>
-
     </div>
 
     <!-- 性能统计弹窗 (液态版) -->
