@@ -1,4 +1,0 @@
-D:/cppRepositories/HotWordSystem/build/CMakeFiles/HotWordSystem.dir
-D:/cppRepositories/HotWordSystem/build/CMakeFiles/RunTests.dir
-D:/cppRepositories/HotWordSystem/build/CMakeFiles/edit_cache.dir
-D:/cppRepositories/HotWordSystem/build/CMakeFiles/rebuild_cache.dir
