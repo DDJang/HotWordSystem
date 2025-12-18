@@ -172,11 +172,11 @@ function fetchAndUpdateRealtimeChart() {
                 showNotification('数据清理提示', '部分历史数据因超出设置的最大保留时间，已被常规清除。', 'warning');
             }
 
-            // 3. 【核心修复】安全地更新全局状态
+            // 3. 安全地更新全局状态
             // 只有当服务器返回有效值时，才更新用于 Info 弹窗的全局变量
             if (data.window_sec !== undefined) {
                 currentWindowSize = data.window_sec;
-                // 【关键】只有在首次加载时，才去修改输入框的值！
+                // 只有在首次加载时，才去修改输入框的值！
                 // 之后无论服务器返回什么，都不要动输入框，防止打断用户打字
                 if (isInitialLoad) {
                     document.getElementById('winSize').value = data.window_sec;
@@ -185,7 +185,7 @@ function fetchAndUpdateRealtimeChart() {
 
             if (data.retention_sec !== undefined) {
                 currentRetentionSize = data.retention_sec;
-                // 【关键】同上，只在首次加载时修改输入框
+                // 同上，只在首次加载时修改输入框
                 if (isInitialLoad) {
                     document.getElementById('retSize').value = data.retention_sec;
                 }
@@ -247,7 +247,7 @@ function fetchAndUpdateRealtimeChart() {
                 });
             }
         }).catch(error => {
-            // 【新增】处理网络错误
+            // 处理网络错误
             console.error("Fetch error:", error);
             overlay.classList.add('show', 'no-data');
             overlayText.innerHTML = '❌<br>连接失败，请检查服务是否运行。';
@@ -298,7 +298,6 @@ function validateTime(id) {
     const regex = /^\d{1,2}:\d{1,2}:\d{1,2}$/;
 
     if (!regex.test(val)) {
-        // 原来的 alert() 已被替换
         showNotification(
             '格式错误',
             `您输入的时间“${val}”格式不正确，请使用 HH:MM:SS 格式。`,
@@ -351,7 +350,7 @@ function toggleSensitiveFilter(el, suppressUpdate = false) {
 
 
 function updateConfig() {
-    // 【关键】后台是 allow_all (是否保留所有)
+    // 后台是 allow_all (是否保留所有)
     // 我们的开关是 enable_filter (是否启用过滤)
     // 所以：allow_all = !enable_filter
 
@@ -458,17 +457,17 @@ function renderTrends(list) {
 
 function apiPost(url, data) {
     log("Sending...");
-    // 【修改点1】在 fetch 前面加上 return，把承诺返回出去
+    // 在 fetch 前面加上 return，把承诺返回出去
     return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
         .then(r => r.json())
         .then(d => {
             const serverTime = d.timestamp || null;
             log("✅ " + (d.message || "OK"), serverTime);
-            return d; // 【修改点2】把服务器的数据传给下一步
+            return d; // 把服务器的数据传给下一步
         })
         .catch(e => {
             log("❌ " + e);
-            throw e; // 【修改点3】如果出错，抛出错误让调用者知道
+            throw e; // 如果出错，抛出错误让调用者知道
         });
 }
 function log(msg, customTime = null) {
@@ -532,10 +531,10 @@ function sendManualData() {
 
     // 发送数据
     apiPost('/api/command', { cmd: val });
-    
+
     // 清空输入框
-    inputEl.value = ""; 
-    
+    inputEl.value = "";
+
     showNotification('数据发送', '模拟数据/指令已发送至服务器', 'success');
 
     // 检查是否为 SHUTDOWN 指令
@@ -565,10 +564,10 @@ function addSensitive() {
 
     // 发送请求
     apiPost('/api/config', { add_sensitive: w });
-    
+
     // 清空输入框
-    inputEl.value = ""; 
-    
+    inputEl.value = "";
+
     // 刷新配置并显示成功提示
     setTimeout(loadConfigState, 500);
     showNotification('屏蔽词添加成功', `已将 "${w}" 加入屏蔽列表。`, 'success');
@@ -635,7 +634,6 @@ function viewHistory() {
             });
         })
         .catch(error => {
-            // [新增] 错误处理，让调试更方便
             console.error('Failed to fetch history data:', error);
             log("❌ Error loading history.", currentBackendTimestamp);
             showNotification('加载失败', '无法获取历史数据，请检查连接或时间范围。', 'danger');
@@ -753,7 +751,7 @@ function uploadFile(event) {
  */
 function showConfigInfo() {
     // 1. 获取当前输入框的值
-    // 【核心修改-2】不再从输入框读取，而是从我们存储的全局变量读取
+    // 不再从输入框读取，而是从我们存储的全局变量读取
     const win = currentWindowSize;
     const ret = currentRetentionSize;
     const k = document.getElementById('displayK').value;
@@ -912,7 +910,7 @@ function closeInfoModal(e) {
 
 
 /**
- * 【新增】关闭删除敏感词确认弹窗
+ * 关闭删除敏感词确认弹窗
  */
 function closeRemoveSensitiveModal(e) {
     const modal = document.getElementById('removeSensitiveModal');
@@ -938,7 +936,6 @@ function executeRemoveSensitive() {
 
 
 function toggleHistoryMode() {
-    // isHistoryMode 是您已有的全局变量，我们用它来判断当前状态
     if (isHistoryMode) {
         // 如果当前是历史模式，就执行“返回实时”的逻辑
         backToRealtime();
@@ -1001,7 +998,7 @@ function checkBenchmarkStatus() {
                     clearInterval(benchmarkPollTimer);
                     benchmarkPollTimer = null;
                     showNotification('压力测试完成', `数据注入成功！`, 'success', 5000);
-                    updateBenchmarkButtonUI(false); // 【修改点】测试完成后，重置按钮
+                    updateBenchmarkButtonUI(false); // 测试完成后，重置按钮
                 }
             }
         })
@@ -1010,7 +1007,7 @@ function checkBenchmarkStatus() {
                 clearInterval(benchmarkPollTimer);
                 benchmarkPollTimer = null;
                 showNotification('查询失败', '无法获取压测状态，请检查连接。', 'danger');
-                updateBenchmarkButtonUI(false); // 【修改点】查询失败后，也重置按钮
+                updateBenchmarkButtonUI(false); // 查询失败后，也重置按钮
                 console.error("Benchmark status check failed:", err);
             }
         });
@@ -1045,7 +1042,7 @@ function updateBackgroundEffect() {
     setTimeout(() => {
         // 查找所有包含 'show' 类的模态框
         const openModals = document.querySelectorAll('.modal-overlay.show');
-        
+
         if (openModals.length > 0) {
             document.body.classList.add('has-modal');
         } else {
@@ -1055,8 +1052,7 @@ function updateBackgroundEffect() {
 }
 
 // === 核心逻辑注入 ===
-// 我们使用 MutationObserver 自动监听所有弹窗的变化
-// 这样您就不需要修改每一个 showStats/closeStats 函数了！
+// 使用 MutationObserver 自动监听所有弹窗的变化
 const observerConfig = { attributes: true, attributeFilter: ['class'] };
 const modalObserver = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {

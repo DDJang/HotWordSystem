@@ -12,7 +12,7 @@
 
 <body>
 
-    <!-- 【新增】通知容器 -->
+    <!-- 通知容器 -->
     <div id="notification-container" class="notification-container"></div>
 
     <div id="main-view">
@@ -29,16 +29,16 @@
 
                 <div id="mainChart" style="width:100%; height:90%;"></div>
 
-                <div id="chart-state-overlay" class="state-overlay"> <!-- class 已修改 -->
+                <div id="chart-state-overlay" class="state-overlay">
                     <div class="spinner"></div>
                     <p>正在加载数据...</p>
                 </div>
             </div>
 
-            <!-- 【新增】一个容器，用于平分下半部分空间 -->
+            <!-- 一个容器，用于平分下半部分空间 -->
             <div class="bottom-row-container">
 
-                <!-- 1. 这是您原来的“趋势分析”模块 -->
+                <!-- 1. “趋势分析”模块 -->
                 <div class="card" style="flex: 1; display: flex; flex-direction: column;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
                         <h2 style="margin:0;">📈 趋势分析</h2>
@@ -56,25 +56,25 @@
                             <tbody id="trendBody"></tbody>
                         </table>
 
-                        <!-- 【新增】趋势分析的状态遮罩层 -->
+
                         <div id="trend-state-overlay" class="state-overlay">
-                            <!-- 注意：这里默认没有 spinner，因为趋势通常是瞬时更新的 -->
+
                             <p>📈<br>暂无趋势数据</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- 2. 这是我们移过来的“数据模拟”模块，并调整了内部UI -->
+                <!-- 2. “数据模拟”模块 -->
                 <div class="control-group" id="data-simulation-panel-left">
                     <h2 style="margin:0; margin-bottom: 10px;">📝 数据模拟</h2>
 
-                    <!-- 【核心UI调整】上下布局 -->
+                    <!-- 上下布局 -->
                     <div class="data-simulation-layout-vertical">
                         <div class="textarea-container">
                             <textarea id="manualInput" placeholder="在此输入单行或多行模拟数据..."></textarea>
                         </div>
 
-                        <!-- 【新增】一个用于放置底部按钮的行容器 -->
+                        <!-- 一个用于放置底部按钮的行容器 -->
                         <div class="bottom-buttons-row">
                             <button onclick="sendManualData()">发送数据</button>
                             <button onclick="document.getElementById('fileUploader').click()"
@@ -91,7 +91,7 @@
 
         <div class="right-col">
 
-            <!-- 这是您原来的 Header，保持不变 -->
+            <!-- Header -->
             <div id="right-col-header">
                 <div id="right-col-header-top-row">
                     <h2 style="margin: 0;">🎮 控制台</h2>
@@ -129,9 +129,7 @@
             </div>
 
 
-            <!-- ============================================= -->
-            <!-- ========= 从这里开始是重新排序的模块 ========= -->
-            <!-- ============================================= -->
+
 
 
 
@@ -347,7 +345,6 @@
                 <span class="stat-val" id="cfg_ret">-- s</span>
             </div>
 
-            <!-- 【新增】趋势阈值显示 -->
             <div class="stat-row">
                 <span>📈 趋势阈值 (Threshold)</span>
                 <span class="stat-val" id="cfg_trend">--</span>
@@ -371,7 +368,7 @@
         </div>
     </div>
 
-    <!-- == 新增：关机确认弹窗 (液态玻璃风格) == -->
+    <!-- == 关机确认弹窗 (液态玻璃风格) == -->
     <div id="shutdownModal" class="modal-overlay" onclick="closeShutdownModal(event)">
         <div class="modal-content" style="width: 420px;">
             <h2>⚠️ 严重警告 ⚠️</h2>
@@ -394,7 +391,7 @@
         </div>
     </div>
 
-    <!-- 【新增】清空数据确认弹窗 -->
+    <!-- 清空数据确认弹窗 -->
     <div id="resetModal" class="modal-overlay" onclick="closeResetModal(event)">
         <div class="modal-content" style="width: 420px;">
             <h2>⚠️ 操作确认 ⚠️</h2>
