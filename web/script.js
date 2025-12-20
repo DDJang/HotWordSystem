@@ -367,7 +367,7 @@ function updateConfig() {
         tags: tags
     });
 
-    showNotification('配置已更新', '新的过滤规则已应用', 'success', 2000);
+    showNotification('配置已更新', '新的过滤规则从当前时间戳生效', 'success', 2000);
 }
 
 
@@ -792,8 +792,21 @@ function showPosInfo() {
     } else {
         content = '<p>当前 <strong>已启用</strong> 词性过滤。</p><p>只有 <span class="highlight-blue">蓝色高亮</span> 的标签所代表的词性才会被保留和统计，其他词性将被忽略。</p>';
     }
+
+    // 添加关于生效时间的补充说明
+    content += `
+        <div class="info-note" style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #ddd;">
+            <p style="margin:0; font-size: 0.9em; color: #666;">
+                <strong>⚠️ 生效机制：</strong><br>
+                此设置仅对修改后<strong>新接收</strong>的数据生效。<br>
+                此前已统计的历史结果将会保留，不会因开关切换而发生改变。
+            </p>
+        </div>
+    `;
+
     showInfoModal(title, content);
 }
+
 function showSensitiveInfo() {
     const isEnabled = document.getElementById('cb_filter_sensitive_enable').checked;
     const title = '🛡️ 敏感词过滤说明';
@@ -804,6 +817,18 @@ function showSensitiveInfo() {
     } else {
         content = '<p>当前 <strong>已启用</strong> 敏感词过滤。</p><p>您在下方列表中添加的所有词汇，都将被系统自动屏蔽，不会出现在热词统计中。</p>';
     }
+
+    // 添加关于生效时间的补充说明
+    content += `
+        <div class="info-note" style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #ddd;">
+            <p style="margin:0; font-size: 0.9em; color: #666;">
+                <strong>⚠️ 生效机制：</strong><br>
+                此设置仅对修改后<strong>新接收</strong>的数据生效。<br>
+                此前已统计的历史结果将会保留，不会因开关切换而发生改变。
+            </p>
+        </div>
+    `;
+
     showInfoModal(title, content);
 }
 
@@ -1017,12 +1042,53 @@ function checkBenchmarkStatus() {
 function showHistoryReportInfo() {
     const title = '📂 历史报告说明';
     const htmlContent = `
-        <p>当您点击 “导出历史报告” 按钮后，系统将在后台生成一份详细的文本报告。</p>
-        <p>报告的默认保存路径为：</p>
-        <div class="code-block">HotWordSystem\\build\\report_output.txt</div>
-        <div class="info-note">
+        <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+            <p>点击 “导出历史报告” 后，系统将在后台生成一份文本分析报告。</p>
+            
+            <h4 style="margin: 10px 0 5px; color: #333;">1. 报告里的数据是什么？</h4>
+            <p style="margin: 0 0 10px; color: #666;">
+                报告展示的是<strong>按时间段（如每分钟）独立的</strong>热词统计快照，而非截止到当前的累计总数。这反映了不同时刻的话题焦点变化。
+            </p>
+
+            <h4 style="margin: 10px 0 5px; color: #333;">2. 文件保存在哪里？</h4>
+            <p style="margin: 0 0 5px; color: #666;">
+                生成的文件名为 <code style="background: #eef; padding: 2px 4px; border-radius: 4px;">report_output.txt</code>。
+            </p>
+            <p style="margin: 0 0 5px; color: #666;">
+                具体的保存路径取决于您的启动方式，但通常位于：
+            </p>
+            <div class="code-block" style="margin-bottom: 5px;">与 HotWordSystem.exe 同级的目录</div>
+        </div>
+
+        <div class="info-note" style="margin-top: 15px;">
             <p style="margin:0;"><strong>💡 提示：</strong></p>
-            <p style="margin:0;">由于浏览器安全限制，程序无法直接为您打开本地文件。请手动复制上方路径，并在您的文件资源管理器中打开。</p>
+            <p style="margin:0;">由于浏览器安全限制，程序无法直接为您打开文件。请手动前往程序所在文件夹（或构建目录）查看该文件。</p>
+        </div>
+    `;
+    showInfoModal(title, htmlContent);
+}
+
+function showBenchmarkInfo() {
+    const title = '⚡ 压力测试说明';
+    const htmlContent = `
+        <div style="font-size: 14px; line-height: 1.6;">
+            <p>启动测试后，系统将<strong>随机生成句子</strong>模拟高并发输入流。</p>
+            
+            <div class="info-note" style="margin-top: 15px;">
+                <p style="margin:0 0 5px 0;"><strong>🛠️ 如何修改生成内容？</strong></p>
+                <p style="margin:0; color: #555;">
+                    请在源码中修改文件：<br>
+                    <code style="background: #eef; padding: 2px 4px; border-radius: 4px;">GlobalUtils.h</code>
+                </p>
+                <p style="margin:5px 0 0 0; color: #555;">
+                    目标函数：<br>
+                    <code style="background: #eef; padding: 2px 4px; border-radius: 4px;">static std::string generateRandomSentence()</code>
+                </p>
+                <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #ccc; color: #b91c1c; font-size: 0.9em;">
+                    <strong>⚠️ 注意：</strong><br>
+                    修改 C++ 源码后，必须<strong>手动重新编译</strong>并更新 exe 文件，更改才会生效。
+                </div>
+            </div>
         </div>
     `;
     showInfoModal(title, htmlContent);
