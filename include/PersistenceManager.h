@@ -18,30 +18,61 @@ class PersistenceManager {
 private:
     std::string logFilePath;
 
+    // --- 统一日志辅助函数 ---
+    void logInfo(const std::string& msg) const {
+        std::cout << "[Info]  " << msg << std::endl;
+    }
+
+    void logWarn(const std::string& msg) const {
+        std::cout << "[Warn]  " << msg << std::endl;
+    }
+
+    void logError(const std::string& msg) const {
+        std::cerr << "[Error] " << msg << std::endl;
+    }
+
+    // 严重的文件锁死/损坏警告，保持醒目
+    void printCriticalFileError() const {
+        std::cerr << "\n"
+                  << "========================================================\n"
+                  << "  [CRITICAL FILE ERROR] \n"
+                  << "  The log file '" << logFilePath << "' is corrupted or locked.\n"
+                  << "  The program cannot write to it.\n"
+                  << "\n"
+                  << "  >>> ACTION REQUIRED: <<<\n"
+                  << "  1. Close this program completely.\n"
+                  << "  2. Go to 'data' folder.\n"
+                  << "  3. Manually DELETE 'history.log'.\n"
+                  << "  4. Restart the program.\n"
+                  << "========================================================\n"
+                  << std::endl;
+    }
+
 public:
     PersistenceManager(const std::string& path = "data/history.log") : logFilePath(path) {
         fs::path p(path);
 
-        // 1. 自动创建目录 (例如 data/)
+        // 1. 自动创建目录
         if (p.has_parent_path()) {
             fs::path parent = p.parent_path();
             if (!fs::exists(parent)) {
                 try {
                     fs::create_directories(parent);
-                    std::cout << "[Init] Created directory: " << parent.string() << std::endl;
+                    logInfo("Created directory: " + parent.string());
                 } catch (const std::exception& e) {
-                    std::cerr << "[Error] Failed to create directory: " << e.what() << std::endl;
+                    logError("Failed to create directory: " + std::string(e.what()));
                 }
             }
         }
 
-        // 2. 自动创建空文件 (防止读取时报错 "No history log found")
+        // 2. 自动创建空文件
         if (!fs::exists(p)) {
-            std::ofstream tmp(p); // 打开并立即关闭，这会创建一个空文件
+            std::ofstream tmp(p);
             if (tmp.is_open()) {
                 tmp.close();
+                // 可选：logInfo("Created new log file: " + path);
             } else {
-                std::cerr << "[Error] Failed to create log file. Check permissions." << std::endl;
+                logError("Failed to create log file. Check permissions.");
             }
         }
     }
@@ -51,7 +82,10 @@ public:
         if (words.empty()) return;
 
         std::ofstream ofs(logFilePath, std::ios::app);
-        if (!ofs.is_open()) return;
+        if (!ofs.is_open()) {
+            printCriticalFileError();
+            return;
+        }
 
         ofs << timestamp << "|";
         for (std::size_t i = 0; i < words.size(); ++i) {
@@ -65,13 +99,15 @@ public:
     void generateReport(long long startTime, long long endTime, int timeStep, const std::string& outputPath) {
         std::ifstream ifs(logFilePath);
         
-        // 经过构造函数的处理，这里一般不会再失败了
-        // 但如果文件被意外删除，这里还是要做个防御性判断
         if (!ifs.is_open()) {
             // 尝试重新创建
             std::ofstream tmp(logFilePath);
-            tmp.close();
-            std::cout << "[Warn] History log was missing and has been re-created (Empty)." << std::endl;
+            if (tmp.is_open()) {
+                tmp.close();
+                logWarn("History log was missing and has been re-created (Empty).");
+            } else {
+                logError("History log missing and cannot be created.");
+            }
             return;
         }
 
@@ -106,13 +142,16 @@ public:
         writeReportToFile(reportData, outputPath, timeStep);
     }
 
-    // 查询历史区间的聚合 Top-K，直接返回数据给 Web API
+    // 查询历史区间的聚合 Top-K
     std::vector<std::pair<std::string, int>> queryHistoryTopK(long long startTime, long long endTime, int k) {
         std::ifstream ifs(logFilePath);
+        if (!ifs.is_open()) {
+            // 这里通常不需要打印错误，直接返回空即可，由上层处理逻辑
+            return {};
+        }
+
         std::unordered_map<std::string, int> counts;
         std::string line;
-
-        if (!ifs.is_open()) return {};
 
         while (std::getline(ifs, line)) {
             if (line.empty()) continue;
@@ -124,10 +163,8 @@ public:
                 ts = std::stoll(line.substr(0, delimPos));
             } catch(...) { continue; }
             
-            // 过滤时间
             if (ts < startTime || ts > endTime) continue;
 
-            // 统计词频
             std::string content = line.substr(delimPos + 1);
             std::stringstream ss(content);
             std::string word;
@@ -136,7 +173,6 @@ public:
             }
         }
 
-        // 排序取 Top-K
         std::vector<std::pair<std::string, int>> sortedWords(counts.begin(), counts.end());
         std::sort(sortedWords.begin(), sortedWords.end(), [](const auto& a, const auto& b){
             return a.second > b.second;
@@ -151,16 +187,18 @@ public:
     // 清空日志文件
     void clearLog() {
         std::ofstream ofs(logFilePath, std::ios::trunc);
-        ofs.close();
-        std::cout << "[System] History log file cleared." << std::endl;
+        if (!ofs.is_open()) {
+            printCriticalFileError();
+            return;
+        }
+        logInfo("History log file cleared.");
     }
 
 private:
-
     void writeReportToFile(const std::map<long long, std::unordered_map<std::string, int>>& data, const std::string& path, int step) {
         std::ofstream ofs(path);
         if (!ofs.is_open()) {
-            std::cerr << "[Error] Cannot write report to " << path << std::endl;
+            logError("Failed to open output report file: " + path);
             return;
         }
 
@@ -175,7 +213,6 @@ private:
             for (const auto& bucket : data) {
                 long long time = bucket.first;
                 
-                // 简单的格式化时间
                 int h = (time / 3600) % 24;
                 int m = (time / 60) % 60;
                 int s = time % 60;
@@ -183,7 +220,6 @@ private:
                 ofs << "[" << std::setfill('0') << std::setw(2) << h << ":" 
                     << std::setw(2) << m << ":" << std::setw(2) << s << "]\n";
 
-                // 排序 Top-5
                 std::vector<std::pair<std::string, int>> sortedWords(bucket.second.begin(), bucket.second.end());
                 std::sort(sortedWords.begin(), sortedWords.end(), [](const auto& a, const auto& b){
                     return a.second > b.second;
@@ -195,6 +231,6 @@ private:
                 ofs << "\n";
             }
         }
-        std::cout << "[Report] Successfully saved to " << path << std::endl;
+        logInfo("Report successfully saved to " + path);
     }
 };
