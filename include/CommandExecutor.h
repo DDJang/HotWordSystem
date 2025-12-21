@@ -63,14 +63,10 @@ public:
             // 1. 带时间戳的数据
             if (std::regex_search(line, match, timeRegex)) {
                 long long ts = GlobalUtils::parseTimeSeconds(match[1].str());
-                std::string content = match[2].str();
                 if (ts > ctx.lastTimestamp) ctx.lastTimestamp = ts;
                 
                 // 执行数据处理
-                std::vector<std::string> words = ctx.processor->process(content);
-                ctx.window->addData(ts, words);
-                ctx.persistence->logData(ts, words);
-                ctx.monitor->record(static_cast<int>(words.size()));
+                internalProcess(ts, match[2].str());
                 successCount++;
             }
             // 2. 指令: 设置窗口
@@ -175,10 +171,7 @@ public:
             // 排除掉含有 [ACTION] 的行，避免指令识别失败被当成数据处理
             else if (line.find("[ACTION]") == std::string::npos) {
                 ctx.lastTimestamp++;
-                std::vector<std::string> words = ctx.processor->process(line);
-                ctx.window->addData(ctx.lastTimestamp, words);
-                ctx.persistence->logData(ctx.lastTimestamp, words);
-                ctx.monitor->record(static_cast<int>(words.size()));
+                internalProcess(ctx.lastTimestamp, line);
                 successCount++;
             }
             // 12. 无法识别的行
@@ -199,16 +192,11 @@ public:
     }
 
 private:
-    void processData(long long ts, const std::string& content, std::stringstream& result) {
+    void internalProcess(long long ts, const std::string& content) {
         std::vector<std::string> words = ctx.processor->process(content);
         ctx.window->addData(ts, words);
         ctx.persistence->logData(ts, words);
         ctx.monitor->record(static_cast<int>(words.size()));
-        
-        // 如果是自动生成的时间戳，显示格式化时间
-        if (content == content) { // 这里原本逻辑是复用的，这里简单处理
-            result << "Data processed (T=" << GlobalUtils::formatTime(ts) << "): " << words.size() << " words.";
-        }
     }
 
     void runBenchmark(int n) {
@@ -238,13 +226,8 @@ private:
                     return; // 直接跳出循环，不再写入这“最后一批”数据
                 }
 
-                std::vector<std::string> words = ctx.processor->process(sentence);
-                ctx.window->addData(startTs, words);
-                ctx.persistence->logData(startTs, words);
-                
-                // monitor->record 和 lastTimestamp 的更新也需要保护
-                ctx.lastTimestamp = startTs;
-                ctx.monitor->record(static_cast<int>(words.size()));
+                ctx.lastTimestamp = startTs; // 更新时间戳
+                internalProcess(startTs, sentence);
             }
             // 锁在这里被释放，给其他线程机会
         }
