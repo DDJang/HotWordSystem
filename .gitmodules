@@ -1,0 +1,10 @@
+# 配置 cppjieba 子模块
+[submodule "third_party/cppjieba"]
+    url = https://github.com/yanyiwu/cppjieba.git
+    path = third_party/cppjieba
+    recursive = true
+
+# 配置 utf8cpp 子模块
+[submodule "third_party/utfcpp"]
+    url = https://github.com/nemtrif/utfcpp.git
+    path = third_party/utfcpp
