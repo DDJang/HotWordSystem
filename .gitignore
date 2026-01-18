@@ -18,6 +18,11 @@ lib/
 *.so
 *.dylib
 
+# Python 虚拟环境
+.venv/
+__pycache__/
+*.py[cod]
+
 # CMake 自动生成的文件
 CMakeCache.txt
 CMakeFiles/
