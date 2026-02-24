@@ -1,13 +1,13 @@
 # 🔥 HotWordSystem - 高性能实时热词分析系统
 
 <p align="center">
-    <img src="https://img.shields.io/badge/C%2B%2B-17-blue.svg" alt="C++17">
+    <img src="https://img.shields.io/badge/C%2B%2B-20-blue.svg" alt="C++20">
     <img src="https://img.shields.io/badge/CMake-3.10%2B-yellow.svg" alt="CMake">
     <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT">
     <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-orange.svg" alt="Platform">
 </p>
 
-**HotWordSystem** 是一个基于 C++17 构建的高性能实时文本流分析引擎。它能够高效地处理连续的文本输入，进行实时的中文分词、数据清洗，并利用精巧的**双层动态滑动窗口算法**来统计热词频率（Top-K）与分析热度趋势。
+**HotWordSystem** 是一个基于 C++20 构建的高性能实时文本流分析引擎。它能够高效地处理连续的文本输入，进行实时的中文分词、数据清洗，并利用精巧的**双层动态滑动窗口算法**来统计热词频率（Top-K）与分析热度趋势。
 
 项目内置了一个轻量级 Web 服务器，提供一个采用**液态玻璃 (Glassmorphism)** 设计风格的现代化 **Web Dashboard**。用户可以通过该仪表盘进行实时图表监控、历史数据回放、动态调整过滤策略、执行系统压测，并支持使用 Python 脚本进行自动化的数据注入。
 
@@ -17,7 +17,7 @@
 
 | 领域       | 技术/库                                                 | 用途                               |
 | :--------- | :------------------------------------------------------ | :--------------------------------- |
-| **后端**   | C++17, STL, `<thread>`, `<atomic>`                      | 核心逻辑、并发控制                 |
+| **后端**   | C++20, STL, `<thread>`, `<atomic>`                      | 核心逻辑、并发控制                 |
 | **Web服务** | `httplib.h`                                             | 轻量级 HTTP/HTTPS 服务器           |
 | **数据交换** | `nlohmann/json`                                         | 前后端 JSON 序列化                 |
 | **NLP核心** | `cppjieba`, `utfcpp`                                    | 中文分词、词性标注、UTF-8 清洗     |
@@ -91,7 +91,7 @@ HotWordSystem/
 ## 🛠️ 构建指南 (Build Instructions)
 
 ### 前置依赖
-*   **C++ 编译器**: 支持 C++17 标准 (例如 GCC 8+, Clang 6+, MSVC 2019+)。
+*   **C++ 编译器**: 支持 C++20 标准。
 *   **CMake**: 版本 3.10 或更高。
 *   **Python 3** (可选): 用于运行 `scripts/client.py` 脚本。
 

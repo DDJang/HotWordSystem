@@ -1,11 +1,14 @@
 #pragma once
 #include <string>
-#include <regex>
 #include <sstream>
 #include <thread>
 #include <iostream>
 #include <iomanip>
 #include <chrono>
+#include <future>
+#include <mutex>
+
+#include <ctre.hpp>
 #include "SystemContext.h"
 #include "GlobalUtils.h"
 #include "SlidingWindow.h"
@@ -13,30 +16,14 @@
 class CommandExecutor {
 private:
     SystemContext& ctx;
-    
-    // 正则表达式
-    const std::regex timeRegex{R"(\[(\d{1,2}:\d{1,2}:\d{1,2})\]\s*(.*))"};
-    const std::regex benchRegex{R"(\[ACTION\]\s*BENCHMARK\s*N=(\d+))"};
-    const std::regex stopBenchRegex{R"(\[ACTION\]\s*BENCHMARK_STOP)"};
-    const std::regex statusBenchRegex{R"(\[ACTION\]\s*BENCHMARK_STATUS)"};
-    const std::regex windowRegex{R"(\[ACTION\]\s*SET_WINDOW\s*S=(\d+))"};
-    const std::regex historyRegex{R"(\[ACTION\]\s*HISTORY\s*START=(\d{1,2}:\d{1,2}:\d{1,2})\s*END=(\d{1,2}:\d{1,2}:\d{1,2})\s*STEP=(\d+))"};
-    const std::regex resetRegex{R"(\[ACTION\]\s*RESET)"}; 
-    const std::regex trendRegex{R"(\[ACTION\]\s*TREND\s*K=(\d+))"}; 
-    const std::regex queryRegex{R"(\[ACTION\]\s*QUERY\s*K=(\d+))"}; 
-    const std::regex retentionRegex{R"(\[ACTION\]\s*SET_RETENTION\s*R=(\d+))"};
-    const std::regex shutdownRegex{R"(\[ACTION\]\s*SHUTDOWN)"};
 
 public:
     CommandExecutor(SystemContext& context) : ctx(context) {}
 
     // 处理入口：支持单行或多行文本
     std::string process(const std::string& fullInput) {
-        // 在函数入口处加锁，保护整个 process 过程
-        std::lock_guard<std::mutex> lock(ctx.global_mutex);
 
-
-        // 防止超大包攻击
+        // 1. 防止超大包攻击
         if (fullInput.length() > 5000000) { 
             return "Error: Input too large.";
         }
@@ -45,193 +32,196 @@ public:
         std::string line;
         std::stringstream finalOutput;
         int successCount = 0;
-        int lineCount = 0;
 
         // 逐行读取
         while (std::getline(ss, line)) {
             // 去除 Windows 换行符 \r
             if (!line.empty() && line.back() == '\r') line.pop_back();
-            // 去除首尾空白（可选，视需求而定，这里简单判空）
             if (line.empty()) continue;
 
-            lineCount++;
-            
-            // === 内部单行处理逻辑 (内联) ===
-            std::smatch match;
-            std::string currentResult; // 当前行的处理结果
+            // === 优化：快速路径判断 ===
+            // 如果包含 [ACTION]，则是指令，否则尝试匹配时间戳数据或纯文本
+            bool isAction = (line.find("[ACTION]") != std::string::npos);
 
-            // 1. 带时间戳的数据
-            if (std::regex_search(line, match, timeRegex)) {
-                long long ts = GlobalUtils::parseTimeSeconds(match[1].str());
-                if (ts > ctx.lastTimestamp) ctx.lastTimestamp = ts;
-                
-                // 执行数据处理
-                internalProcess(ts, match[2].str());
-                successCount++;
-            }
-            // 2. 指令: 设置窗口
-            else if (std::regex_search(line, match, windowRegex)) {
-                long long s = GlobalUtils::safeStoll(match[1].str(), 1, 2592000, 600);
-                ctx.window->setWindowSize(s);
-                finalOutput << "[Cmd] Window set to " << s << "s\n";
-            }
-            // 3. 指令: 压测相关
-            else if (std::regex_search(line, match, benchRegex)) {
-                int n = GlobalUtils::safeStoi(match[1].str(), 1, 100000, 0);
-                if (n > 0) { // 【优化】只有当 N > 0 时才真正启动
-                    ctx.abortBenchmark = false; 
-                    std::thread([this, n](){ runBenchmark(n); }).detach();
-                    finalOutput << "[Cmd] Benchmark started N=" << n << "\n";
-                } else { // 当 N=0 时，等同于终止
-                    ctx.abortBenchmark = true;
-                    finalOutput << "[Cmd] Benchmark stop signal sent via N=0.\n";
+            if (isAction) {
+                handleAction(line, finalOutput);
+            } else {
+                // 处理数据行 (带时间戳 或 纯文本)
+                if (handleData(line)) {
+                    successCount++;
                 }
-            }
-            // 指令：终止压测
-            else if (std::regex_search(line, match, stopBenchRegex)) {
-                ctx.abortBenchmark = true;
-                finalOutput << "[Cmd] Benchmark stop signal sent.\n";
-            }
-            // 指令：查询压测状态
-            else if (std::regex_search(line, match, statusBenchRegex)) {
-                if (ctx.isBenchmarkRunning) {
-                    return R"({"is_running": true})"; // 直接返回JSON，不进入 finalOutput
-                } else {
-                    return R"({"is_running": false})"; // 直接返回JSON
-                }
-            }
-            // 4. 指令: 性能
-            else if (line.find("[ACTION] STATS") != std::string::npos) {
-                ctx.monitor->printStats();
-                finalOutput << "[Cmd] Stats printed to console.\n";
-            }
-            // 5. 指令: 历史报告
-            else if (std::regex_search(line, match, historyRegex)) {
-                long long startT = GlobalUtils::parseTimeSeconds(match[1].str());
-                long long endT = GlobalUtils::parseTimeSeconds(match[2].str());
-                int step = GlobalUtils::safeStoi(match[3].str(), 1, 3600, 60);
-                ctx.persistence->generateReport(startT, endT, step, "report_output.txt");
-                finalOutput << "[Cmd] Report generated.\n";
-            }
-            // 6. 指令: 重置
-            else if (std::regex_search(line, match, resetRegex)) {
-                ctx.abortBenchmark = true;
-                ctx.isBenchmarkRunning = false;
-                ctx.window->reset();
-                ctx.monitor->reset();
-                ctx.persistence->clearLog();
-                ctx.lastTimestamp = 0;
-                finalOutput << "[Cmd] System Reset.\n";
-            }
-            // 7. 指令：终止程序指令
-            else if (std::regex_search(line, match, shutdownRegex)) {
-                ctx.shouldExit = true; // 1. 设置标志位
-                ctx.abortBenchmark = true;
-                ctx.isBenchmarkRunning = false;
-                finalOutput << "Shutdown initiated. Server will terminate shortly...\n";
-
-                // 2. 启动一个独立的倒计时线程，确保服务器最终会关闭
-                //    这可以防止在没有浏览器连接的情况下，服务器永远不退出的问题。
-                std::thread([](){
-                    // 等待3秒，给UI足够的时间通过轮询来发现并显示关闭状态
-                    std::this_thread::sleep_for(std::chrono::seconds(3));
-                    std::cout << "[System] Timed shutdown executing..." << std::endl;
-                    std::exit(0); // 3. 强制退出进程
-                }).detach();
-            }
-            // 8. 指令: 趋势
-            else if (std::regex_search(line, match, trendRegex)) {
-                // 趋势结果比较长，如果是批量操作建议不要看趋势
-                int k = GlobalUtils::safeStoi(match[1].str(), 1, 100, 10);
-                auto list = ctx.window->getTrendingWords(k);
-                finalOutput << "Trend Top-" << k << ":\n";
-                for (auto& p : list) finalOutput << p.first << " " << std::fixed << std::setprecision(2) << p.second << "\n";
-            }
-            // 9. 指令: 查询
-            else if (std::regex_search(line, match, queryRegex)) {
-                int k = GlobalUtils::safeStoi(match[1].str(), 1, 100, 10);
-                
-                // 开始计时
-                auto start = std::chrono::high_resolution_clock::now();
-                auto list = ctx.window->getTopK(k);
-                // 结束计时
-                auto end = std::chrono::high_resolution_clock::now();
-                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-
-                finalOutput << "Query Top-" << k << " (Time: " << duration << " us):\n";
-                for (auto& p : list) finalOutput << p.first << " : " << p.second << "\n";
-            }
-            // 10. 指令: 保留时间
-            else if (std::regex_search(line, match, retentionRegex)) {
-                long long r = GlobalUtils::safeStoll(match[1].str(), 60, 2592000, 3600);
-                ctx.window->setMaxRetention(r);
-                finalOutput << "[Cmd] Max retention set to " << r << "s\n";
-            }
-            // 11. 无时间戳的纯文本数据 (自动补全时间)
-            // 排除掉含有 [ACTION] 的行，避免指令识别失败被当成数据处理
-            else if (line.find("[ACTION]") == std::string::npos) {
-                ctx.lastTimestamp++;
-                internalProcess(ctx.lastTimestamp, line);
-                successCount++;
-            }
-            // 12. 无法识别的行
-            else {
-                // 忽略
             }
         }
 
         if (successCount > 0) {
             finalOutput << "Processed " << successCount << " data lines. ";
         }
-        
-        if (finalOutput.str().empty() && lineCount > 0) {
-            return "No valid data or commands processed.";
-        }
-
         return finalOutput.str();
     }
 
 private:
-    void internalProcess(long long ts, const std::string& content) {
-        std::vector<std::string> words = ctx.processor->process(content);
-        ctx.window->addData(ts, words);
-        ctx.persistence->logData(ts, words);
-        ctx.monitor->record(static_cast<int>(words.size()));
+    // === 逻辑拆分：处理指令 ===
+    void handleAction(const std::string& line, std::stringstream& out) {
+        // 1. SET_WINDOW S=(\d+)
+        if (auto m = ctre::search<R"(\[ACTION\]\s*SET_WINDOW\s*S=(\d+))">(line)) {
+            long long s = GlobalUtils::safeStoll(m.get<1>().to_string(), 1, 2592000, 600);
+            ctx.window->setWindowSize(s);
+            out << "[Cmd] Window set to " << s << "s\n";
+        }
+        // 2. BENCHMARK N=(\d+)
+        else if (auto m = ctre::search<R"(\[ACTION\]\s*BENCHMARK\s*N=(\d+))">(line)) {
+            int n = GlobalUtils::safeStoi(m.get<1>().to_string(), 1, 100000, 0);
+            if (n > 0) {
+                ctx.abortBenchmark = false;
+                // 【优化】使用线程池执行压测，而不是 detach 裸线程
+                ctx.threadPool->enqueue([this, n](){ 
+                    this->runBenchmark(n); 
+                });
+                out << "[Cmd] Benchmark started N=" << n << " (Async via ThreadPool)\n";
+            } else {
+                ctx.abortBenchmark = true;
+                out << "[Cmd] Benchmark stop signal sent via N=0.\n";
+            }
+        }
+        // 3. STOP BENCHMARK
+        else if (ctre::search<R"(\[ACTION\]\s*BENCHMARK_STOP)">(line)) {
+            ctx.abortBenchmark = true;
+            out << "[Cmd] Benchmark stop signal sent.\n";
+        }
+        // 4. BENCHMARK STATUS
+        else if (ctre::search<R"(\[ACTION\]\s*BENCHMARK_STATUS)">(line)) {
+            // 这种情况下我们无法直接 return JSON string，因为外层在 loop。
+            // 简单处理：写入 output
+            out << (ctx.isBenchmarkRunning ? R"({"is_running": true})" : R"({"is_running": false})") << "\n";
+        }
+        // 5. HISTORY REPORT
+        else if (auto m = ctre::search<R"(\[ACTION\]\s*HISTORY\s*START=(\d{1,2}:\d{1,2}:\d{1,2})\s*END=(\d{1,2}:\d{1,2}:\d{1,2})\s*STEP=(\d+))">(line)) {
+            long long startT = GlobalUtils::parseTimeSeconds(m.get<1>().to_string());
+            long long endT = GlobalUtils::parseTimeSeconds(m.get<2>().to_string());
+            int step = GlobalUtils::safeStoi(m.get<3>().to_string(), 1, 3600, 60);
+            
+            // 历史报告可能很耗时，建议放入线程池（但这里为了返回结果给用户，先保持同步，或未来改为异步回调）
+            ctx.persistence->generateReport(startT, endT, step, "report_output.txt");
+            out << "[Cmd] Report generated.\n";
+        }
+        // 6. RESET
+        else if (ctre::search<R"(\[ACTION\]\s*RESET)">(line)) {
+            {
+                std::lock_guard<std::mutex> lock(ctx.global_mutex); // 加锁保护重置过程
+                ctx.abortBenchmark = true;
+                ctx.isBenchmarkRunning = false;
+                ctx.window->reset();
+                ctx.monitor->reset();
+                ctx.persistence->clearLog();
+                ctx.lastTimestamp = 0;
+            }
+            out << "[Cmd] System Reset.\n";
+        }
+        // 7. SHUTDOWN
+        else if (ctre::search<R"(\[ACTION\]\s*SHUTDOWN)">(line)) {
+            ctx.shouldExit = true;
+            ctx.abortBenchmark = true;
+            out << "Shutdown initiated. Server will terminate shortly...\n";
+
+            // 【优化】使用线程池执行延时退出任务
+            ctx.threadPool->enqueue([](){
+                std::this_thread::sleep_for(std::chrono::seconds(3));
+                std::cout << "[System] Timed shutdown executing..." << std::endl;
+                std::exit(0); 
+            });
+        }
+        // 8. TREND K=(\d+)
+        else if (auto m = ctre::search<R"(\[ACTION\]\s*TREND\s*K=(\d+))">(line)) {
+            int k = GlobalUtils::safeStoi(m.get<1>().to_string(), 1, 100, 10);
+            auto list = ctx.window->getTrendingWords(k);
+            out << "Trend Top-" << k << ":\n";
+            for (auto& p : list) out << p.first << " " << std::fixed << std::setprecision(2) << p.second << "\n";
+        }
+        // 9. QUERY K=(\d+)
+        else if (auto m = ctre::search<R"(\[ACTION\]\s*QUERY\s*K=(\d+))">(line)) {
+            int k = GlobalUtils::safeStoi(m.get<1>().to_string(), 1, 100, 10);
+            auto start = std::chrono::high_resolution_clock::now();
+            auto list = ctx.window->getTopK(k);
+            auto end = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+            out << "Query Top-" << k << " (Time: " << duration << " us):\n";
+            for (auto& p : list) out << p.first << " : " << p.second << "\n";
+        }
+        // 10. SET_RETENTION R=(\d+)
+        else if (auto m = ctre::search<R"(\[ACTION\]\s*SET_RETENTION\s*R=(\d+))">(line)) {
+            long long r = GlobalUtils::safeStoll(m.get<1>().to_string(), 60, 2592000, 3600);
+            ctx.window->setMaxRetention(r);
+            out << "[Cmd] Max retention set to " << r << "s\n";
+        }
+        // 11. STATS
+        else if (line.find("STATS") != std::string::npos) {
+            ctx.monitor->printStats();
+            out << "[Cmd] Stats printed to console.\n";
+        }
     }
 
+    // === 逻辑拆分：处理数据 ===
+    bool handleData(const std::string& line) {
+        // 1. 尝试匹配带时间戳的数据: [12:00:01] content
+        if (auto m = ctre::match<R"(^\[(\d{1,2}:\d{1,2}:\d{1,2})\]\s*(.*)$)">(line)) {
+            long long ts = GlobalUtils::parseTimeSeconds(m.get<1>().to_string());
+            std::string content = m.get<2>().to_string();
+            
+            if (ts > ctx.lastTimestamp) ctx.lastTimestamp = ts;
+            
+            internalProcess(ts, content);
+            return true;
+        }
+        
+        // 2. 纯文本 (无时间戳，自动补全)
+        // 此时直接认为是数据
+        ctx.lastTimestamp++; // 简单递增
+        internalProcess(ctx.lastTimestamp, line);
+        return true;
+    }
+
+    // === 核心数据处理 (加锁保护) ===
+    void internalProcess(long long ts, const std::string& content) {
+        // 分词过程是纯计算，可以不加锁（假设 TextProcessor 无状态且线程安全）
+        std::vector<std::string> words = ctx.processor->process(content);
+
+        // === 临界区 ===
+        // 保护 SlidingWindow, PersistenceManager, PerformanceMonitor
+        // 因为 runBenchmark (线程池) 和 process (主线程) 可能会同时调用这里
+        {
+            std::lock_guard<std::mutex> lock(ctx.global_mutex);
+            ctx.window->addData(ts, words);
+            ctx.persistence->logData(ts, words);
+            ctx.monitor->record(static_cast<int>(words.size()));
+        }
+    }
+
+    // === 压测任务 (运行在 ThreadPool 中) ===
     void runBenchmark(int n) {
         ctx.isBenchmarkRunning = true; 
-
         long long startTs = ctx.lastTimestamp; 
         ctx.monitor->reset();
         
+        std::cout << "[Benchmark] Started on thread " << std::this_thread::get_id() << std::endl;
+
         for(int i = 0; i < n; i++) {
-            // 紧急刹车检查
             if (ctx.abortBenchmark) {
                 std::cout << "[System] Benchmark aborted by user." << std::endl;
-                ctx.isBenchmarkRunning = false;
-                return; // 直接退出线程
+                break;
             }
 
             startTs++; 
             std::string sentence = GlobalUtils::generateRandomSentence();
 
-            // 进入临界区，加锁
-            {
-                std::lock_guard<std::mutex> lock(ctx.global_mutex);
-
-                // 检查 2: 锁内检查 (为了正确性)
-                // 如果在我们等待锁的时候，RESET 命令已经执行，那么我们必须在这里中止操作
-                if (ctx.abortBenchmark) {
-                    return; // 直接跳出循环，不再写入这“最后一批”数据
-                }
-
-                ctx.lastTimestamp = startTs; // 更新时间戳
-                internalProcess(startTs, sentence);
-            }
-            // 锁在这里被释放，给其他线程机会
+            // 更新时间戳 (非严格精确，但这主要用于模拟)
+            ctx.lastTimestamp = startTs;
+            
+            // 调用处理逻辑 (内部会自动加锁)
+            internalProcess(startTs, sentence);
         }
-        std::cout << "[System] Benchmark finished." << std::endl;
+
         ctx.isBenchmarkRunning = false;
+        std::cout << "[System] Benchmark finished." << std::endl;
     }
 };

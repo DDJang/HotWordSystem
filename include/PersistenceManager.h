@@ -11,12 +11,15 @@
 #include <iomanip>
 #include <filesystem>
 #include <stdexcept>
+#include "ThreadPool.h"
 
 namespace fs = std::filesystem;
 
 class PersistenceManager {
 private:
     std::string logFilePath;
+    ThreadPool& pool;           // 引用 Context 里的线程池
+    mutable std::mutex fileMtx;  // 文件访问锁
 
     // --- 统一日志辅助函数 ---
     void logInfo(const std::string& msg) const {
@@ -49,7 +52,8 @@ private:
     }
 
 public:
-    PersistenceManager(const std::string& path = "data/history.log") : logFilePath(path) {
+    PersistenceManager(ThreadPool& tp, const std::string& path = "data/history.log")
+        : logFilePath(path), pool(tp) {
         fs::path p(path);
 
         // 1. 自动创建目录
@@ -81,22 +85,26 @@ public:
     void logData(long long timestamp, const std::vector<std::string>& words) {
         if (words.empty()) return;
 
-        std::ofstream ofs(logFilePath, std::ios::app);
-        if (!ofs.is_open()) {
-            printCriticalFileError();
-            return;
-        }
+        pool.enqueue([this, timestamp, words = std::move(words)]() {
+            // 加锁：确保同一时间只有一个线程在写这个文件
+            std::lock_guard<std::mutex> lock(this->fileMtx);
+            
+            std::ofstream ofs(this->logFilePath, std::ios::app);
+            if (!ofs.is_open()) return;
 
-        ofs << timestamp << "|";
-        for (std::size_t i = 0; i < words.size(); ++i) {
-            ofs << words[i];
-            if (i < words.size() - 1) ofs << ",";
-        }
-        ofs << "\n";
+            ofs << timestamp << "|";
+            for (std::size_t i = 0; i < words.size(); ++i) {
+                ofs << words[i];
+                if (i < words.size() - 1) ofs << ",";
+            }
+            ofs << "\n";
+        });
     }
 
     // --- 生成报告 ---
     void generateReport(long long startTime, long long endTime, int timeStep, const std::string& outputPath) {
+        std::lock_guard<std::mutex> lock(fileMtx);
+
         std::ifstream ifs(logFilePath);
         
         if (!ifs.is_open()) {
@@ -144,6 +152,8 @@ public:
 
     // 查询历史区间的聚合 Top-K
     std::vector<std::pair<std::string, int>> queryHistoryTopK(long long startTime, long long endTime, int k) {
+        std::lock_guard<std::mutex> lock(fileMtx);
+
         std::ifstream ifs(logFilePath);
         if (!ifs.is_open()) {
             // 这里通常不需要打印错误，直接返回空即可，由上层处理逻辑
@@ -186,6 +196,8 @@ public:
 
     // 清空日志文件
     void clearLog() {
+        std::lock_guard<std::mutex> lock(fileMtx);
+
         std::ofstream ofs(logFilePath, std::ios::trunc);
         if (!ofs.is_open()) {
             printCriticalFileError();

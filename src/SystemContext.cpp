@@ -9,6 +9,8 @@
 // 这是 SystemContext 构造函数的唯一、权威的实现。
 // 无论是主程序还是测试程序，都将链接到这个实现。
 SystemContext::SystemContext() {
+    threadPool = std::make_unique<ThreadPool>(14);
+
     // 路径配置
     const char* DICT_PATH = "dict/jieba.dict.utf8";
     const char* HMM_PATH = "dict/hmm_model.utf8";
@@ -26,7 +28,7 @@ SystemContext::SystemContext() {
     // 初始化组件
     processor = std::make_unique<TextProcessor>(DICT_PATH, HMM_PATH, USER_DICT_PATH, IDF_PATH, STOP_WORD_PATH, SENSITIVE_PATH);
     window = std::make_unique<SlidingWindow>(600, *this);
-    persistence = std::make_unique<PersistenceManager>("data/history.log");
+    persistence = std::make_unique<PersistenceManager>(*threadPool, "data/history.log");
     monitor = std::make_unique<PerformanceMonitor>();
 }
 SystemContext::~SystemContext() = default;

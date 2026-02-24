@@ -1,16 +1,19 @@
 #pragma once
+
 #include <memory>
 #include <fstream>
 #include <atomic>
 #include "TextProcessor.h"
 #include "PersistenceManager.h"
 #include "PerformanceMonitor.h"
+#include "ThreadPool.h"
 
 // 对于 SlidingWindow，只使用前向声明来打破循环依赖
 class SlidingWindow;
 
 class SystemContext {
 public:
+    std::unique_ptr<ThreadPool> threadPool;
     std::unique_ptr<TextProcessor> processor;
     std::unique_ptr<SlidingWindow> window;
     std::unique_ptr<PersistenceManager> persistence;
