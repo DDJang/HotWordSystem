@@ -3,6 +3,7 @@
 #include <memory>
 #include <fstream>
 #include <atomic>
+
 #include "TextProcessor.h"
 #include "PersistenceManager.h"
 #include "PerformanceMonitor.h"

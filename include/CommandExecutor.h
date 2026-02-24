@@ -8,7 +8,7 @@
 #include <future>
 #include <mutex>
 
-#include <ctre.hpp>
+#include "ctre.hpp"
 #include "SystemContext.h"
 #include "GlobalUtils.h"
 #include "SlidingWindow.h"
@@ -23,7 +23,7 @@ public:
     // 处理入口：支持单行或多行文本
     std::string process(const std::string& fullInput) {
 
-        // 1. 防止超大包攻击
+        // 防止超大包攻击
         if (fullInput.length() > 5000000) { 
             return "Error: Input too large.";
         }
@@ -60,7 +60,7 @@ public:
     }
 
 private:
-    // === 逻辑拆分：处理指令 ===
+    // === 处理指令 ===
     void handleAction(const std::string& line, std::stringstream& out) {
         // 1. SET_WINDOW S=(\d+)
         if (auto m = ctre::search<R"(\[ACTION\]\s*SET_WINDOW\s*S=(\d+))">(line)) {
@@ -73,7 +73,6 @@ private:
             int n = GlobalUtils::safeStoi(m.get<1>().to_string(), 1, 100000, 0);
             if (n > 0) {
                 ctx.abortBenchmark = false;
-                // 【优化】使用线程池执行压测，而不是 detach 裸线程
                 ctx.threadPool->enqueue([this, n](){ 
                     this->runBenchmark(n); 
                 });
@@ -122,8 +121,6 @@ private:
             ctx.shouldExit = true;
             ctx.abortBenchmark = true;
             out << "Shutdown initiated. Server will terminate shortly...\n";
-
-            // 【优化】使用线程池执行延时退出任务
             ctx.threadPool->enqueue([](){
                 std::this_thread::sleep_for(std::chrono::seconds(3));
                 std::cout << "[System] Timed shutdown executing..." << std::endl;
@@ -161,7 +158,7 @@ private:
         }
     }
 
-    // === 逻辑拆分：处理数据 ===
+    // === 处理数据 ===
     bool handleData(const std::string& line) {
         // 1. 尝试匹配带时间戳的数据: [12:00:01] content
         if (auto m = ctre::match<R"(^\[(\d{1,2}:\d{1,2}:\d{1,2})\]\s*(.*)$)">(line)) {

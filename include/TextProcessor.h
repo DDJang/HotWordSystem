@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <mutex>
 #include <utility>
+
 #include "cppjieba/Jieba.hpp"
 #include "utf8.h"
 
