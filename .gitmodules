@@ -8,3 +8,9 @@
 [submodule "third_party/utfcpp"]
     url = https://github.com/nemtrif/utfcpp.git
     path = third_party/utfcpp
+
+# 配置 CTRE 子模块
+[submodule "third_party/compile-time-regular-expressions"]
+	path = third_party/compile-time-regular-expressions
+	url = https://github.com/hanickadot/compile-time-regular-expressions.git
+
