@@ -14,3 +14,15 @@
 	path = third_party/compile-time-regular-expressions
 	url = https://github.com/hanickadot/compile-time-regular-expressions.git
 
+[submodule "third_party/zlib"]
+	path = third_party/zlib
+	url = https://github.com/madler/zlib.git
+[submodule "third_party/spdlog"]
+	path = third_party/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "third_party/mimalloc"]
+	path = third_party/mimalloc
+	url = https://github.com/microsoft/mimalloc.git
+[submodule "third_party/tbb"]
+	path = third_party/tbb
+	url = https://github.com/oneapi-src/oneTBB.git
