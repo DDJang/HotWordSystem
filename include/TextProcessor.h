@@ -4,15 +4,20 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
+#include <unordered_map>
 #include <fstream>
 #include <iostream>
 #include <algorithm>
 #include <mutex>
 #include <shared_mutex>
 #include <utility>
+#include <future>
+#include <thread>
+#include <functional>
 
 #include "cppjieba/Jieba.hpp"
 #include "utf8.h"
+#include "ThreadPool.h"
 
 class TextProcessor {
 private:
@@ -27,6 +32,19 @@ private:
     mutable std::mutex mtx; // 互斥锁，保护配置修改
 
     std::string sensitiveFilePath; // 保存文件路径
+
+    // 缓存机制
+    mutable std::mutex cacheMtx; // 缓存锁
+    std::unordered_map<std::string, std::vector<std::string>> processCache; // 处理结果缓存
+    size_t cacheSize = 10000; // 缓存大小
+
+    // 线程池用于并行处理
+    std::unique_ptr<ThreadPool> threadPool;
+
+    // 批处理配置
+    static constexpr size_t BATCH_SIZE = 100; // 批处理大小
+    static constexpr size_t CACHE_MAX_SIZE = 10000; // 最大缓存大小
+    static constexpr size_t CACHE_CLEAN_THRESHOLD = 8000; // 缓存清理阈值
 
 public:
     TextProcessor(const std::string& dict_path, const std::string& hmm_path, 
@@ -46,6 +64,10 @@ public:
         allowedTags = { "n", "ns", "nr", "nt", "nz", "v", "vn", "a", "eng" }; 
         allowAllTags = false;
         allowAllSensitive = false; // 初始化 
+
+        // 初始化线程池，线程数为CPU核心数
+        size_t threadCount = std::thread::hardware_concurrency();
+        threadPool = std::make_unique<ThreadPool>(threadCount);
     }
 
     // 设置词性配置
@@ -149,6 +171,15 @@ public:
             return {}; 
         }
 
+        // 检查缓存
+        {
+            std::lock_guard<std::mutex> lock(cacheMtx);
+            auto it = processCache.find(sentence);
+            if (it != processCache.end()) {
+                return it->second;
+            }
+        }
+
         // 在分词前，先进行清洗和标准化
         std::string clean_sentence = sanitizeAndNormalize(sentence);
 
@@ -196,7 +227,68 @@ public:
 
             final_words.push_back(word);
         }
+
+        // 存入缓存
+        {
+            std::lock_guard<std::mutex> lock(cacheMtx);
+            // 清理过期缓存
+            if (processCache.size() > CACHE_CLEAN_THRESHOLD) {
+                cleanCache();
+            }
+            // 添加新缓存
+            if (processCache.size() < CACHE_MAX_SIZE) {
+                processCache[sentence] = final_words;
+            }
+        }
+
         return final_words;
+    }
+
+    // 批量处理函数
+    std::vector<std::vector<std::string>> processBatch(const std::vector<std::string>& sentences) {
+        std::vector<std::vector<std::string>> results;
+        results.reserve(sentences.size());
+
+        // 并行处理
+        std::vector<std::future<std::vector<std::string>>> futures;
+        futures.reserve(sentences.size());
+
+        for (const auto& sentence : sentences) {
+            futures.push_back(threadPool->enqueue([this, &sentence]() {
+                return process(sentence);
+            }));
+        }
+
+        // 收集结果
+        for (auto& future : futures) {
+            results.push_back(future.get());
+        }
+
+        return results;
+    }
+
+    // 清理缓存
+    void cleanCache() {
+        std::lock_guard<std::mutex> lock(cacheMtx);
+        // 简单清理：保留一半缓存
+        size_t targetSize = CACHE_MAX_SIZE / 2;
+        if (processCache.size() <= targetSize) {
+            return;
+        }
+
+        // 迭代删除一半的缓存项
+        size_t count = 0;
+        auto it = processCache.begin();
+        while (it != processCache.end() && count < processCache.size() - targetSize) {
+            it = processCache.erase(it);
+            count++;
+        }
+    }
+
+    // 清空缓存
+    void clearCache() {
+        std::lock_guard<std::mutex> lock(cacheMtx);
+        processCache.clear();
     }
 
 private:
