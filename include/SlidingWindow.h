@@ -26,6 +26,9 @@ private:
     // 即使窗口只有 10秒，我们也保留 100分钟数据，以便用户随时把窗口拉大
     std::atomic<long long> maxRetentionSeconds{6000};
 
+    // 重置标志，用于控制reset操作期间的数据添加
+    std::atomic<bool> isResetting{false};
+
     // 1. 物理存储 (Storage)：保留所有原始数据，用于“回滚”和“重算”
     // 使用std::map保证时间戳有序
     std::map<long long, std::vector<std::string>> storage;
@@ -63,21 +66,51 @@ public:
     void addData(long long timestamp, const std::vector<std::string>& words) {
         if (words.empty()) return;
 
+        // 检查是否正在执行reset操作
+        while (isResetting.load(std::memory_order_acquire)) {
+            // 如果正在执行reset操作，等待直到完成
+            std::this_thread::yield();
+        }
+
+        // 再次检查是否正在执行reset操作，因为可能在等待期间状态发生了变化
+        if (isResetting.load(std::memory_order_acquire)) {
+            return;
+        }
+
         // 1. 更新系统时间（无锁操作）
         long long oldCursor = currentTimeCursor;
         while (timestamp > oldCursor) {
             if (currentTimeCursor.compare_exchange_weak(oldCursor, timestamp)) {
                 break;
             }
+            // 每次尝试更新后，都检查是否正在执行reset操作
+            if (isResetting.load(std::memory_order_acquire)) {
+                return;
+            }
+        }
+
+        // 检查是否正在执行reset操作，因为可能在更新系统时间期间状态发生了变化
+        if (isResetting.load(std::memory_order_acquire)) {
+            return;
         }
 
         // 2. 获取窗口大小（无锁操作）
         long long windowSize = windowSizeSeconds;
         long long threshold = timestamp - windowSize;
 
+        // 检查是否正在执行reset操作，因为可能在获取窗口大小期间状态发生了变化
+        if (isResetting.load(std::memory_order_acquire)) {
+            return;
+        }
+
         // 3. 加写锁处理数据存储和更新
         {
             std::unique_lock<std::shared_mutex> lock(rw_mtx);
+
+            // 再次检查是否正在执行reset操作，因为可能在获取锁期间状态发生了变化
+            if (isResetting.load(std::memory_order_acquire)) {
+                return;
+            }
 
             // 存入物理存储 (Storage) - 只要不过期太久都存
             // 注意：这里处理乱序，如果 key 已存在则追加
@@ -272,12 +305,21 @@ public:
     }
 
     void reset() {
+        // 设置重置标志为true，阻止新的数据添加
+        isResetting.store(true, std::memory_order_release);
+        
+        // 短暂延迟，让所有正在执行addData操作的线程有机会检查isResetting标志
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        
         // 使用写锁，因为需要修改所有数据结构
         std::unique_lock<std::shared_mutex> lock(rw_mtx);
         storage.clear();
         activeData.clear();
         wordCounts.clear();
         currentTimeCursor = 0;
+        
+        // 重置操作完成，设置标志为false
+        isResetting.store(false, std::memory_order_release);
     }
 
     // 设置最大保留时间 (Storage)
