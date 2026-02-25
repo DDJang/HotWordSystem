@@ -8,6 +8,7 @@
 #include <iostream>
 #include <algorithm>
 #include <mutex>
+#include <shared_mutex>
 #include <utility>
 
 #include "cppjieba/Jieba.hpp"
@@ -148,19 +149,6 @@ public:
             return {}; 
         }
 
-        // 复制配置（避免长时间持有锁，提升并发性能）
-        std::unordered_set<std::string> currentSensitive;
-        std::unordered_set<std::string> currentTags;
-        bool useAllTags = false;
-        bool useAllSensitive = false;
-        {
-            std::lock_guard<std::mutex> lock(mtx);
-            currentSensitive = sensitiveWords;
-            currentTags = allowedTags;
-            useAllTags = allowAllTags; // 读取标志位
-            useAllSensitive = allowAllSensitive; // 读取配置
-        }
-
         // 在分词前，先进行清洗和标准化
         std::string clean_sentence = sanitizeAndNormalize(sentence);
 
@@ -168,25 +156,45 @@ public:
         std::vector<std::pair<std::string, std::string>> tag_words;
         jieba->Tag(clean_sentence, tag_words); // 结果存为 {词, 词性}
 
+        // 获取配置和集合的快照（使用互斥锁）
+        bool useAllTags = false;
+        bool useAllSensitive = false;
+        std::unordered_set<std::string> currentAllowedTags;
+        std::unordered_set<std::string> currentSensitiveWords;
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            useAllTags = allowAllTags; // 读取标志位
+            useAllSensitive = allowAllSensitive; // 读取配置
+            currentAllowedTags = allowedTags; // 复制集合
+            currentSensitiveWords = sensitiveWords; // 复制集合
+        }
+
         std::vector<std::string> final_words;
+        final_words.reserve(tag_words.size()); // 预分配空间
+
         for (const auto& pair : tag_words) {
             const std::string& word = pair.first;
             const std::string& tag = pair.second;
 
-            // 1. 词性判断
-            bool isPosAllowed = useAllTags || (currentTags.count(tag) > 0);
-            
-            // 2. 敏感词判断 (逻辑修改)
-            // 如果是敏感词 AND (不允许保留所有敏感词) -> 也就是被屏蔽
-            bool isSensitive = (currentSensitive.count(word) > 0);
-            bool shouldFilterSensitive = isSensitive && !useAllSensitive;
-
-            if (stopWords.find(word) == stopWords.end() && 
-                !shouldFilterSensitive && // 如果不过滤敏感词，这里就放行
-                isPosAllowed && 
-                word.size() > 1) { 
-                final_words.push_back(word);
+            // 1. 停用词判断（不需要锁，stopWords不常修改）
+            if (stopWords.find(word) != stopWords.end() || word.size() <= 1) {
+                continue;
             }
+
+            // 2. 词性判断
+            bool isPosAllowed = useAllTags || (currentAllowedTags.count(tag) > 0);
+            if (!isPosAllowed) {
+                continue;
+            }
+            
+            // 3. 敏感词判断
+            bool isSensitive = (currentSensitiveWords.count(word) > 0);
+            bool shouldFilterSensitive = isSensitive && !useAllSensitive;
+            if (shouldFilterSensitive) {
+                continue;
+            }
+
+            final_words.push_back(word);
         }
         return final_words;
     }

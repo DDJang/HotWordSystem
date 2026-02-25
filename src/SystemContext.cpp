@@ -9,7 +9,7 @@
 // 这是 SystemContext 构造函数的唯一、权威的实现。
 // 无论是主程序还是测试程序，都将链接到这个实现。
 SystemContext::SystemContext() {
-    threadPool = std::make_unique<ThreadPool>(14);
+    threadPool = std::make_unique<ThreadPool>();
 
     // 路径配置
     const char* DICT_PATH = "dict/jieba.dict.utf8";

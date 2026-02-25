@@ -21,6 +21,11 @@ private:
     std::string logFilePath;
     ThreadPool& pool;           // 引用 Context 里的线程池
     mutable std::mutex fileMtx;  // 文件访问锁
+    
+    // 批量提交相关
+    mutable std::mutex batchMtx;
+    std::vector<std::pair<long long, std::vector<std::string>>> batchData;
+    const size_t BATCH_SIZE = 100; // 每100条数据批量提交一次
 
     // --- 统一日志辅助函数 ---
     void logInfo(const std::string& msg) const {
@@ -81,24 +86,56 @@ public:
             }
         }
     }
+    
+    // --- 析构函数：确保刷新剩余批量数据 ---
+    ~PersistenceManager() {
+        flushBatch();
+    }
 
-    // --- 写入日志 ---
+    // --- 批量写入日志 ---
     void logData(long long timestamp, const std::vector<std::string>& words) {
         if (words.empty()) return;
 
-        pool.enqueue([this, timestamp, words = std::move(words)]() {
+        {
+            std::lock_guard<std::mutex> lock(batchMtx);
+            batchData.emplace_back(timestamp, words);
+            
+            // 当批量数据达到阈值时，提交到线程池
+            if (batchData.size() >= BATCH_SIZE) {
+                flushBatch();
+            }
+        }
+    }
+    
+    // --- 刷新批量数据 ---
+    void flushBatch() {
+        if (batchData.empty()) return;
+        
+        // 复制批量数据并清空，减少锁持有时间
+        std::vector<std::pair<long long, std::vector<std::string>>> dataToWrite;
+        {
+            std::lock_guard<std::mutex> lock(batchMtx);
+            dataToWrite.swap(batchData);
+        }
+        
+        pool.enqueue([this, data = std::move(dataToWrite)]() {
             // 加锁：确保同一时间只有一个线程在写这个文件
             std::lock_guard<std::mutex> lock(this->fileMtx);
             
             std::ofstream ofs(this->logFilePath, std::ios::app);
             if (!ofs.is_open()) return;
 
-            ofs << timestamp << "|";
-            for (std::size_t i = 0; i < words.size(); ++i) {
-                ofs << words[i];
-                if (i < words.size() - 1) ofs << ",";
+            for (const auto& entry : data) {
+                long long timestamp = entry.first;
+                const auto& words = entry.second;
+                
+                ofs << timestamp << "|";
+                for (std::size_t i = 0; i < words.size(); ++i) {
+                    ofs << words[i];
+                    if (i < words.size() - 1) ofs << ",";
+                }
+                ofs << "\n";
             }
-            ofs << "\n";
         });
     }
 

@@ -178,20 +178,15 @@ private:
         return true;
     }
 
-    // === 核心数据处理 (加锁保护) ===
+    // === 核心数据处理 ===
     void internalProcess(long long ts, const std::string& content) {
         // 分词过程是纯计算，可以不加锁（假设 TextProcessor 无状态且线程安全）
         std::vector<std::string> words = ctx.processor->process(content);
 
-        // === 临界区 ===
-        // 保护 SlidingWindow, PersistenceManager, PerformanceMonitor
-        // 因为 runBenchmark (线程池) 和 process (主线程) 可能会同时调用这里
-        {
-            std::lock_guard<std::mutex> lock(ctx.global_mutex);
-            ctx.window->addData(ts, words);
-            ctx.persistence->logData(ts, words);
-            ctx.monitor->record(static_cast<int>(words.size()));
-        }
+        // 各个组件自己管理锁，避免嵌套锁
+        ctx.window->addData(ts, words);
+        ctx.persistence->logData(ts, words);
+        ctx.monitor->record(static_cast<int>(words.size()));
     }
 
     // === 压测任务 (运行在 ThreadPool 中) ===
