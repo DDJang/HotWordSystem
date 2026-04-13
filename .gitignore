@@ -18,6 +18,12 @@ lib/
 *.so
 *.dylib
 
+# latex 生成文件
+*.aux
+*.log
+*.toc
+*.out
+
 # Python 虚拟环境
 .venv/
 __pycache__/
