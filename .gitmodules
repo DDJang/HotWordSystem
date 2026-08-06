@@ -2,7 +2,7 @@
 [submodule "third_party/cppjieba"]
     url = https://github.com/yanyiwu/cppjieba.git
     path = third_party/cppjieba
-    recursive = true
+    fetchRecurseSubmodules = true
 
 # 配置 utf8cpp 子模块
 [submodule "third_party/utfcpp"]
@@ -20,3 +20,9 @@
 [submodule "third_party/mimalloc"]
 	path = third_party/mimalloc
 	url = https://github.com/microsoft/mimalloc.git
+[submodule "third_party/json"]
+	path = third_party/json
+	url = https://github.com/nlohmann/json.git
+[submodule "third_party/httplib"]
+	path = third_party/httplib
+	url = https://github.com/yhirose/cpp-httplib.git
