@@ -112,11 +112,11 @@ cd build
 
 ## 测试状态
 
-当前仓库没有根目录 `test/`，CMake 也没有注册项目测试目标，因此目前没有可运行的项目级 CTest 测试。CI 会在仓库出现 `test/CMakeLists.txt` 时再执行 CTest；当前 CI 只验证 Ubuntu 和 Windows 的 Release 配置与构建。
+当前仓库没有根目录 `test/`，CMake 也没有注册项目测试目标，因此目前没有可运行的项目级 CTest 测试。CI 会在仓库出现 `test/CMakeLists.txt` 时再执行 CTest；当前 CTest 步骤因测试配置不存在而跳过。
 
 没有为了填补测试目录而新增临时测试或声称已有测试结果。
 
-当前本地环境没有 Linux、WSL、Docker 或 Linux 虚拟机。Ubuntu 状态：**等待 GitHub Actions 验证**。是否通过以 GitHub Actions 的实际运行结果为准，不能仅根据工作流文件已生成来判断。
+此前一次 GitHub Actions `push` 检查已显示 Ubuntu 和 Windows 的 Release 构建均成功。该结果覆盖工作流中的 CMake configure 和 build，不表示项目已有 CTest 测试结果。当前本地环境没有 Linux、WSL、Docker 或 Linux 虚拟机；Ubuntu 构建未在本地执行，以 GitHub Actions 的实际运行结果为准。
 
 ## 已知限制
 
