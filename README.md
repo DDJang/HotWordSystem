@@ -26,11 +26,12 @@ HotWordSystem/
 ├── include/                         # 核心模块头文件
 ├── src/                             # 程序入口和 SystemContext 实现
 ├── web/                             # Web 页面、样式和脚本
+├── test/                             # 正确性回归测试
 ├── third_party/                     # Git submodule 依赖
 └── .github/workflows/build.yml      # Ubuntu/Windows 构建检查
 ```
 
-当前仓库根目录没有项目级 `test/` 或 `scripts/` 目录。
+当前仓库没有项目级 `scripts/` 目录。
 
 ## 获取依赖
 
@@ -82,7 +83,7 @@ cd build
 ./HotWordSystem
 ```
 
-服务默认监听 `0.0.0.0:8080`，浏览器访问 [http://localhost:8080](http://localhost:8080)。
+服务默认只监听本机 `127.0.0.1:8080`，浏览器访问 [http://127.0.0.1:8080](http://127.0.0.1:8080)。
 
 ## HTTP 接口和命令
 
@@ -112,18 +113,18 @@ cd build
 
 ## 测试状态
 
-当前仓库没有根目录 `test/`，CMake 也没有注册项目测试目标，因此目前没有可运行的项目级 CTest 测试。CI 会在仓库出现 `test/CMakeLists.txt` 时再执行 CTest；当前 CTest 步骤因测试配置不存在而跳过。
+当前仓库包含项目级 `test/CMakeLists.txt`，CTest 注册了 11 个针对持久化、缓存、滑动窗口、benchmark 和析构落盘行为的回归测试。
 
-没有为了填补测试目录而新增临时测试或声称已有测试结果。
+Windows 本地 Release 构建中，11 个 CTest 用例全部通过；真实 smoke 也验证了批量输入、RESET、配置变化、敏感词后端校验、路径穿越拦截和正常 SHUTDOWN。
 
-此前一次 GitHub Actions `push` 检查已显示 Ubuntu 和 Windows 的 Release 构建均成功。该结果覆盖工作流中的 CMake configure 和 build，不表示项目已有 CTest 测试结果。当前本地环境没有 Linux、WSL、Docker 或 Linux 虚拟机；Ubuntu 构建未在本地执行，以 GitHub Actions 的实际运行结果为准。
+当前本地环境没有 Linux、WSL、Docker 或 Linux 虚拟机；Ubuntu 构建和 CTest 未在本地执行，等待本次提交推送后的 GitHub Actions 验证。
 
 ## 已知限制
 
 - 字典、Web 资源和运行时数据使用相对路径，启动时需要以 `build/` 作为工作目录。
-- 当前没有项目级自动化测试、benchmark 结果或覆盖率结果，README 不据此作性能结论。
+- 当前没有 benchmark 性能结果或覆盖率结果，README 不据此作性能结论。
 - 当前内存统计实现只在 Windows 分支读取进程内存；其他平台返回 `0`。
-- HTTP 服务默认绑定所有网卡且没有认证层，适合本地或受控网络环境使用。
+- HTTP 服务默认只绑定本机且没有认证层，不提供远程访问或身份认证。
 - 运行过程中会在 `data/` 和复制后的字典目录中产生状态文件；这些运行时文件不属于源码依赖。
 
 ## License

@@ -11,10 +11,10 @@
 #include <iomanip>
 #include <filesystem>
 #include <stdexcept>
-#include <future>
 #include <memory>
 #include <mutex>
 #include <atomic>
+#include <utility>
 
 // 第三方库
 #include <spdlog/spdlog.h>
@@ -27,12 +27,14 @@ namespace fs = std::filesystem;
 class PersistenceManager {
 private:
     std::string logFilePath;
-    ThreadPool& pool;           // 引用 Context 里的线程池
+    ThreadPool& pool;           // 保留构造接口兼容性；写入由本类串行化
+    mutable std::mutex operationMtx; // 串行化批处理、查询和清空操作
     mutable std::mutex fileMtx;  // 文件访问锁
     
     // 批量提交相关
     mutable std::mutex batchMtx;
-    std::vector<std::pair<long long, std::vector<std::string>>> batchData;
+    using Batch = std::vector<std::pair<long long, std::vector<std::string>>>;
+    Batch batchData;
     const size_t BATCH_SIZE = 100; // 每100条数据批量提交一次
 
     // 压缩存储相关
@@ -48,17 +50,23 @@ private:
     const size_t MAX_LOG_SIZE = 10 * 1024 * 1024; // 最大日志大小（10MB）
     const size_t MAX_LOG_FILES = 5; // 最大日志文件数
 
-    // 异步写入相关
-    std::atomic<size_t> pendingWrites = 0; // 待处理的写入操作数
-    const size_t MAX_PENDING_WRITES = 10; // 最大待处理写入操作数
-
     // 日志记录器
     mutable std::shared_ptr<spdlog::logger> logger;
 
     // --- 统一日志辅助函数 ---
     void initLogger() const {
         if (!logger) {
-            logger = spdlog::stdout_color_mt("PersistenceManager");
+            logger = spdlog::get("PersistenceManager");
+            if (!logger) {
+                try {
+                    logger = spdlog::stdout_color_mt("PersistenceManager");
+                } catch (const spdlog::spdlog_ex&) {
+                    // Another manager may have registered the logger between
+                    // get() and stdout_color_mt(). Reuse the registered one.
+                    logger = spdlog::get("PersistenceManager");
+                }
+            }
+            if (!logger) return;
             logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [%n] %v");
             logger->set_level(spdlog::level::info);
         }
@@ -152,9 +160,7 @@ private:
     }
 
     // 日志轮转相关方法
-    void rotateLog() {
-        std::lock_guard<std::mutex> lock(fileMtx);
-        
+    void rotateLogUnlocked() {
         fs::path logPath(logFilePath);
         if (!fs::exists(logPath)) {
             return;
@@ -194,11 +200,63 @@ private:
         }
     }
 
-    // 检查并执行日志轮转
-    void checkLogRotation() {
+    void rotateLog() {
+        std::lock_guard<std::mutex> lock(fileMtx);
         if (enableLogRotation) {
-            rotateLog();
+            rotateLogUnlocked();
         }
+    }
+
+    Batch takeBatch() {
+        Batch dataToWrite;
+        std::lock_guard<std::mutex> lock(batchMtx);
+        dataToWrite.swap(batchData);
+        return dataToWrite;
+    }
+
+    void writeBatch(const Batch& dataToWrite) {
+        if (dataToWrite.empty()) return;
+
+        std::lock_guard<std::mutex> lock(fileMtx);
+        if (enableLogRotation) {
+            rotateLogUnlocked();
+        }
+
+        std::ofstream ofs(logFilePath, std::ios::app);
+        if (!ofs.is_open()) {
+            printCriticalFileError();
+            return;
+        }
+
+        std::string batchContent;
+        for (const auto& entry : dataToWrite) {
+            const long long timestamp = entry.first;
+            const auto& words = entry.second;
+
+            batchContent += std::to_string(timestamp) + "|";
+            for (std::size_t i = 0; i < words.size(); ++i) {
+                batchContent += words[i];
+                if (i < words.size() - 1) batchContent += ",";
+            }
+            batchContent += "\n";
+        }
+
+        if (enableCompression && batchContent.size() > COMPRESS_THRESHOLD) {
+            const std::string compressed = compressData(batchContent);
+            ofs << "COMPRESSED|" << compressed.size() << "|" << compressed << "\n";
+        } else {
+            ofs << batchContent;
+        }
+
+        if (!ofs) {
+            logError("Failed to write history log: " + logFilePath);
+        }
+    }
+
+    // Must be called while operationMtx is held. The batch is moved out before
+    // touching the file so batchMtx is never re-entered by the flush path.
+    void flushBatchUnlocked() {
+        writeBatch(takeBatch());
     }
 
 public:
@@ -240,85 +298,34 @@ public:
     void logData(long long timestamp, const std::vector<std::string>& words) {
         if (words.empty()) return;
 
+        std::unique_lock<std::mutex> operationLock(operationMtx);
+        Batch dataToWrite;
         {
             std::lock_guard<std::mutex> lock(batchMtx);
             batchData.emplace_back(timestamp, words);
-            
-            // 当批量数据达到阈值时，提交到线程池
+
             if (batchData.size() >= BATCH_SIZE) {
-                flushBatch();
+                dataToWrite.swap(batchData);
             }
+        }
+
+        if (!dataToWrite.empty()) {
+            // The operation lock prevents RESET/query from overtaking this
+            // write, while the batch lock is already released.
+            writeBatch(dataToWrite);
         }
     }
     
     // --- 刷新批量数据 ---
     void flushBatch() {
-        if (batchData.empty()) return;
-        
-        // 检查待处理写入操作数，避免过多并发写入
-        if (pendingWrites >= MAX_PENDING_WRITES) {
-            // 等待一段时间后重试
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            flushBatch();
-            return;
-        }
-        
-        // 增加待处理写入计数
-        pendingWrites++;
-        
-        // 复制批量数据并清空，减少锁持有时间
-        std::vector<std::pair<long long, std::vector<std::string>>> dataToWrite;
-        {
-            std::lock_guard<std::mutex> lock(batchMtx);
-            dataToWrite.swap(batchData);
-        }
-        
-        pool.enqueue([this, data = std::move(dataToWrite)]() {
-            bool success = false;
-            try {
-                // 检查并执行日志轮转
-                this->checkLogRotation();
-                
-                // 加锁：确保同一时间只有一个线程在写这个文件
-                std::lock_guard<std::mutex> lock(this->fileMtx);
-                
-                std::ofstream ofs(this->logFilePath, std::ios::app);
-                if (!ofs.is_open()) return;
-
-                // 构建批量写入数据
-                std::string batchContent;
-                for (const auto& entry : data) {
-                    long long timestamp = entry.first;
-                    const auto& words = entry.second;
-                    
-                    batchContent += std::to_string(timestamp) + "|";
-                    for (std::size_t i = 0; i < words.size(); ++i) {
-                        batchContent += words[i];
-                        if (i < words.size() - 1) batchContent += ",";
-                    }
-                    batchContent += "\n";
-                }
-                
-                // 检查是否需要压缩
-                if (this->enableCompression && batchContent.size() > this->COMPRESS_THRESHOLD) {
-                    std::string compressed = this->compressData(batchContent);
-                    // 写入压缩标记和压缩数据
-                    ofs << "COMPRESSED|" << compressed.size() << "|" << compressed << "\n";
-                } else {
-                    // 直接写入原始数据
-                    ofs << batchContent;
-                }
-                success = true;
-            } catch (const std::exception& e) {
-                this->logError("Error in flushBatch: " + std::string(e.what()));
-            }
-            // 减少待处理写入计数
-            this->pendingWrites--;
-        });
+        std::unique_lock<std::mutex> operationLock(operationMtx);
+        flushBatchUnlocked();
     }
 
     // --- 生成报告 ---
     void generateReport(long long startTime, long long endTime, int timeStep, const std::string& outputPath) {
+        std::unique_lock<std::mutex> operationLock(operationMtx);
+        flushBatchUnlocked();
         std::lock_guard<std::mutex> lock(fileMtx);
 
         std::ifstream ifs(logFilePath);
@@ -351,7 +358,7 @@ public:
                 if (secondDelim == std::string::npos) continue;
                 
                 try {
-                    size_t compressedSize = std::stoull(line.substr(10, firstDelim - 10));
+                    static_cast<void>(std::stoull(line.substr(10, firstDelim - 10)));
                     std::string compressedData = line.substr(secondDelim + 1);
                     
                     // 解压数据
@@ -404,6 +411,8 @@ public:
 
     // 查询历史区间的聚合 Top-K
     std::vector<std::pair<std::string, int>> queryHistoryTopK(long long startTime, long long endTime, int k) {
+        std::unique_lock<std::mutex> operationLock(operationMtx);
+        flushBatchUnlocked();
         std::lock_guard<std::mutex> lock(fileMtx);
 
         std::ifstream ifs(logFilePath);
@@ -484,6 +493,16 @@ public:
 
     // 清空日志文件
     void clearLog() {
+        std::unique_lock<std::mutex> operationLock(operationMtx);
+
+        // RESET discards data that has not been committed yet. Since all
+        // writes are serialized by operationMtx, no older write can run after
+        // the truncation and restore stale history.
+        {
+            std::lock_guard<std::mutex> batchLock(batchMtx);
+            batchData.clear();
+        }
+
         std::lock_guard<std::mutex> lock(fileMtx);
 
         std::ofstream ofs(logFilePath, std::ios::trunc);

@@ -14,6 +14,8 @@
 #include <future>
 #include <thread>
 #include <functional>
+#include <atomic>
+#include <cstdint>
 
 #include "cppjieba/Jieba.hpp"
 #include "utf8.h"
@@ -35,14 +37,17 @@ private:
 
     // 缓存机制
     mutable std::mutex cacheMtx; // 缓存锁
-    std::unordered_map<std::string, std::vector<std::string>> processCache; // 处理结果缓存
-    size_t cacheSize = 10000; // 缓存大小
+    struct CacheEntry {
+        std::uint64_t configVersion;
+        std::vector<std::string> words;
+    };
+    std::unordered_map<std::string, CacheEntry> processCache; // 处理结果缓存
+    // 每次过滤配置变化都递增，防止旧计算结果在清空缓存后重新写回。
+    std::atomic<std::uint64_t> configVersion{0};
 
     // 线程池用于并行处理
     std::unique_ptr<ThreadPool> threadPool;
 
-    // 批处理配置
-    static constexpr size_t BATCH_SIZE = 100; // 批处理大小
     static constexpr size_t CACHE_MAX_SIZE = 10000; // 最大缓存大小
     static constexpr size_t CACHE_CLEAN_THRESHOLD = 8000; // 缓存清理阈值
 
@@ -72,19 +77,29 @@ public:
 
     // 设置词性配置
     void setPosConfig(const std::vector<std::string>& tags, bool allowAll) {
-        std::lock_guard<std::mutex> lock(mtx);
-        allowedTags.clear();
-        for(const auto& t : tags) allowedTags.insert(t);
-        allowAllTags = allowAll;
+        bool updatedAllowAll = allowAll;
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            allowedTags.clear();
+            for(const auto& t : tags) allowedTags.insert(t);
+            allowAllTags = allowAll;
+            configVersion.fetch_add(1, std::memory_order_release);
+        }
+        clearCache();
 
-        std::cout << "[Config] POS tags updated. AllowAllPos=" << std::boolalpha << allowAllTags << std::endl;
+        std::cout << "[Config] POS tags updated. AllowAllPos=" << std::boolalpha << updatedAllowAll << std::endl;
     }
 
     // 单独设置敏感词开关
     void setSensitiveConfig(bool allowAll) {
-        std::lock_guard<std::mutex> lock(mtx);
-        allowAllSensitive = allowAll;
-        std::cout << "[Config] Sensitive config updated. AllowAllSensitive=" << std::boolalpha << allowAllSensitive << std::endl;
+        bool updatedAllowAll = allowAll;
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            allowAllSensitive = allowAll;
+            configVersion.fetch_add(1, std::memory_order_release);
+        }
+        clearCache();
+        std::cout << "[Config] Sensitive config updated. AllowAllSensitive=" << std::boolalpha << updatedAllowAll << std::endl;
     }
     
     bool isAllowAllPos() {
@@ -110,57 +125,70 @@ public:
 
     // 动态更新允许的词性
     void setAllowedTags(const std::vector<std::string>& tags) {
-        std::lock_guard<std::mutex> lock(mtx);
-        allowedTags.clear();
-        for(const auto& t : tags) allowedTags.insert(t);
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            allowedTags.clear();
+            for(const auto& t : tags) allowedTags.insert(t);
+            configVersion.fetch_add(1, std::memory_order_release);
+        }
+        clearCache();
         std::cout << "[Config] Allowed POS tags updated." << std::endl;
     }
 
     // 动态增加敏感词 (支持持久化 + 线程安全)
     void addSensitiveWord(const std::string& word) {
-        std::lock_guard<std::mutex> lock(mtx); // 1. 上锁，保护内存也保护文件
-        
-        // 如果内存里已经有了，就不操作文件了，减少 I/O
-        if (sensitiveWords.find(word) != sensitiveWords.end()) {
-            return;
-        }
+        if (word.empty()) return;
 
-        sensitiveWords.insert(word);
+        {
+            std::lock_guard<std::mutex> lock(mtx); // 保护内存和文件
 
-        // 写入文件 (追加模式)
-        if (!sensitiveFilePath.empty()) {
-            std::ofstream ofs(sensitiveFilePath, std::ios::app);
-            if (ofs.is_open()) {
-                ofs << word << "\n";
-            } else {
-                std::cerr << "[Error] Cannot write to sensitive file: " << sensitiveFilePath << std::endl;
+            // 如果内存里已经有了，就不操作文件了，减少 I/O
+            if (sensitiveWords.find(word) != sensitiveWords.end()) {
+                return;
             }
+
+            sensitiveWords.insert(word);
+
+            // 写入文件 (追加模式)
+            if (!sensitiveFilePath.empty()) {
+                std::ofstream ofs(sensitiveFilePath, std::ios::app);
+                if (ofs.is_open()) {
+                    ofs << word << "\n";
+                } else {
+                    std::cerr << "[Error] Cannot write to sensitive file: " << sensitiveFilePath << std::endl;
+                }
+            }
+            configVersion.fetch_add(1, std::memory_order_release);
         }
+        clearCache();
     }
 
 
     // 动态删除敏感词 (支持持久化 + 线程安全)
     void removeSensitiveWord(const std::string& word) {
-        std::lock_guard<std::mutex> lock(mtx); // 1. 上锁
-        
-        auto it = sensitiveWords.find(word);
-        if (it == sensitiveWords.end()) {
-            return;
-        }
-        
-        sensitiveWords.erase(it);
+        {
+            std::lock_guard<std::mutex> lock(mtx);
 
-        // 删除比较麻烦，必须重写整个文件
-        // 因为文件操作较慢，但这属于低频管理操作，可以接受
-        if (!sensitiveFilePath.empty()) {
-            std::ofstream ofs(sensitiveFilePath, std::ios::trunc); // 截断模式，清空重写
-            if (ofs.is_open()) {
-                for (const auto& w : sensitiveWords) {
-                    ofs << w << "\n";
+            auto it = sensitiveWords.find(word);
+            if (it == sensitiveWords.end()) {
+                return;
+            }
+
+            sensitiveWords.erase(it);
+
+            // 删除比较麻烦，必须重写整个文件
+            if (!sensitiveFilePath.empty()) {
+                std::ofstream ofs(sensitiveFilePath, std::ios::trunc);
+                if (ofs.is_open()) {
+                    for (const auto& w : sensitiveWords) {
+                        ofs << w << "\n";
+                    }
                 }
             }
+            configVersion.fetch_add(1, std::memory_order_release);
         }
-    }   
+        clearCache();
+    }
 
     // 核心处理函数，
     std::vector<std::string> process(const std::string& sentence) {
@@ -171,12 +199,27 @@ public:
             return {}; 
         }
 
-        // 检查缓存
+        // 先获取配置快照，再按配置版本读取缓存。这样配置更新后同一句子
+        // 不会复用旧过滤结果。
+        bool useAllTags = false;
+        bool useAllSensitive = false;
+        std::unordered_set<std::string> currentAllowedTags;
+        std::unordered_set<std::string> currentSensitiveWords;
+        std::uint64_t currentConfigVersion = 0;
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            useAllTags = allowAllTags;
+            useAllSensitive = allowAllSensitive;
+            currentAllowedTags = allowedTags;
+            currentSensitiveWords = sensitiveWords;
+            currentConfigVersion = configVersion.load(std::memory_order_acquire);
+        }
+
         {
             std::lock_guard<std::mutex> lock(cacheMtx);
             auto it = processCache.find(sentence);
-            if (it != processCache.end()) {
-                return it->second;
+            if (it != processCache.end() && it->second.configVersion == currentConfigVersion) {
+                return it->second.words;
             }
         }
 
@@ -186,19 +229,6 @@ public:
         // 使用 Tag 进行分词和词性标注
         std::vector<std::pair<std::string, std::string>> tag_words;
         jieba->Tag(clean_sentence, tag_words); // 结果存为 {词, 词性}
-
-        // 获取配置和集合的快照（使用互斥锁）
-        bool useAllTags = false;
-        bool useAllSensitive = false;
-        std::unordered_set<std::string> currentAllowedTags;
-        std::unordered_set<std::string> currentSensitiveWords;
-        {
-            std::lock_guard<std::mutex> lock(mtx);
-            useAllTags = allowAllTags; // 读取标志位
-            useAllSensitive = allowAllSensitive; // 读取配置
-            currentAllowedTags = allowedTags; // 复制集合
-            currentSensitiveWords = sensitiveWords; // 复制集合
-        }
 
         std::vector<std::string> final_words;
         final_words.reserve(tag_words.size()); // 预分配空间
@@ -233,11 +263,12 @@ public:
             std::lock_guard<std::mutex> lock(cacheMtx);
             // 清理过期缓存
             if (processCache.size() > CACHE_CLEAN_THRESHOLD) {
-                cleanCache();
+                cleanCacheUnlocked();
             }
             // 添加新缓存
-            if (processCache.size() < CACHE_MAX_SIZE) {
-                processCache[sentence] = final_words;
+            if (processCache.size() < CACHE_MAX_SIZE &&
+                configVersion.load(std::memory_order_acquire) == currentConfigVersion) {
+                processCache[sentence] = CacheEntry{currentConfigVersion, final_words};
             }
         }
 
@@ -254,7 +285,7 @@ public:
         futures.reserve(sentences.size());
 
         for (const auto& sentence : sentences) {
-            futures.push_back(threadPool->enqueue([this, &sentence]() {
+            futures.push_back(threadPool->enqueue([this, sentence]() {
                 return process(sentence);
             }));
         }
@@ -270,6 +301,12 @@ public:
     // 清理缓存
     void cleanCache() {
         std::lock_guard<std::mutex> lock(cacheMtx);
+        cleanCacheUnlocked();
+    }
+
+private:
+    // 调用方必须已经持有 cacheMtx。
+    void cleanCacheUnlocked() {
         // 简单清理：保留一半缓存
         size_t targetSize = CACHE_MAX_SIZE / 2;
         if (processCache.size() <= targetSize) {
@@ -285,6 +322,7 @@ public:
         }
     }
 
+public:
     // 清空缓存
     void clearCache() {
         std::lock_guard<std::mutex> lock(cacheMtx);
@@ -332,7 +370,7 @@ private:
                     utf8::append(code_point, std::back_inserter(final_output)); // back_inserter -> std::back_inserter
                 }
 
-            } catch (const utf8::exception& e) {
+            } catch (const utf8::exception&) {
                 // 如果遇到无效的 UTF-8 序列，跳过该字节
                 if (it != end) {
                     ++it;

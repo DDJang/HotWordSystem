@@ -43,4 +43,24 @@ public:
     // 构造函数和析构函数只保留声明
     SystemContext();
     ~SystemContext(); // 对于 unique_ptr 指向不完整类型，析构函数必须在实现文件中定义
+
+    // 统一所有输入来源对逻辑时间戳的更新，避免 CLI、HTTP 和 benchmark
+    // 使用“读取后再赋值”的非原子 read-modify-write。
+    long long nextTimestamp() {
+        return lastTimestamp.fetch_add(1, std::memory_order_acq_rel) + 1;
+    }
+
+    void observeTimestamp(long long timestamp) {
+        long long observed = lastTimestamp.load(std::memory_order_acquire);
+        while (timestamp > observed &&
+               !lastTimestamp.compare_exchange_weak(
+                   observed, timestamp,
+                   std::memory_order_acq_rel,
+                   std::memory_order_acquire)) {
+        }
+    }
+
+    void resetTimestamp() {
+        lastTimestamp.store(0, std::memory_order_release);
+    }
 };

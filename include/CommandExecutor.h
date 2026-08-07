@@ -7,6 +7,8 @@
 #include <chrono>
 #include <future>
 #include <mutex>
+#include <condition_variable>
+#include <atomic>
 
 #include "ctre.hpp"
 #include "SystemContext.h"
@@ -16,12 +18,36 @@
 class CommandExecutor {
 private:
     SystemContext& ctx;
+    std::mutex commandMtx;
+    std::mutex benchmarkMtx;
+    std::condition_variable benchmarkCv;
+    std::future<void> benchmarkFuture;
+    std::atomic<bool> shutdownCompleted{false};
 
 public:
     CommandExecutor(SystemContext& context) : ctx(context) {}
 
+    ~CommandExecutor() {
+        shutdown();
+    }
+
+    // 由 main 在停止 HTTP server 后调用，确保 benchmark、持久化和线程池
+    // 都完成后再销毁 SystemContext。
+    void shutdown() {
+        bool expected = false;
+        if (!shutdownCompleted.compare_exchange_strong(expected, true)) {
+            return;
+        }
+
+        requestBenchmarkStop();
+        waitForBenchmark();
+        ctx.persistence->flushBatch();
+        ctx.threadPool->shutdown();
+    }
+
     // 处理入口：支持单行或多行文本
     std::string process(const std::string& fullInput) {
+        std::lock_guard<std::mutex> commandLock(commandMtx);
 
         // 防止超大包攻击
         if (fullInput.length() > 5000000) { 
@@ -72,26 +98,28 @@ private:
         else if (auto m = ctre::search<R"(\[ACTION\]\s*BENCHMARK\s*N=(\d+))">(line)) {
             int n = GlobalUtils::safeStoi(m.get<1>().to_string(), 1, 100000, 0);
             if (n > 0) {
-                ctx.abortBenchmark = false;
-                ctx.threadPool->enqueue([this, n](){ 
-                    this->runBenchmark(n); 
-                });
-                out << "[Cmd] Benchmark started N=" << n << " (Async via ThreadPool)\n";
+                if (startBenchmark(n)) {
+                    out << "[Cmd] Benchmark started N=" << n << " (Async via ThreadPool)\n";
+                } else {
+                    out << "[Cmd] Benchmark is already running.\n";
+                }
             } else {
-                ctx.abortBenchmark = true;
+                requestBenchmarkStop();
                 out << "[Cmd] Benchmark stop signal sent via N=0.\n";
             }
         }
         // 3. STOP BENCHMARK
         else if (ctre::search<R"(\[ACTION\]\s*BENCHMARK_STOP)">(line)) {
-            ctx.abortBenchmark = true;
+            requestBenchmarkStop();
             out << "[Cmd] Benchmark stop signal sent.\n";
         }
         // 4. BENCHMARK STATUS
         else if (ctre::search<R"(\[ACTION\]\s*BENCHMARK_STATUS)">(line)) {
             // 这种情况下我们无法直接 return JSON string，因为外层在 loop。
             // 简单处理：写入 output
-            out << (ctx.isBenchmarkRunning ? R"({"is_running": true})" : R"({"is_running": false})") << "\n";
+            out << (ctx.isBenchmarkRunning.load(std::memory_order_acquire)
+                        ? R"({"is_running": true})"
+                        : R"({"is_running": false})") << "\n";
         }
         // 5. HISTORY REPORT
         else if (auto m = ctre::search<R"(\[ACTION\]\s*HISTORY\s*START=(\d{1,2}:\d{1,2}:\d{1,2})\s*END=(\d{1,2}:\d{1,2}:\d{1,2})\s*STEP=(\d+))">(line)) {
@@ -105,27 +133,22 @@ private:
         }
         // 6. RESET
         else if (ctre::search<R"(\[ACTION\]\s*RESET)">(line)) {
+            requestBenchmarkStop();
+            waitForBenchmark();
             {
                 std::lock_guard<std::mutex> lock(ctx.global_mutex); // 加锁保护重置过程
-                ctx.abortBenchmark = true;
-                ctx.isBenchmarkRunning = false;
                 ctx.window->reset();
                 ctx.monitor->reset();
                 ctx.persistence->clearLog();
-                ctx.lastTimestamp = 0;
+                ctx.resetTimestamp();
             }
             out << "[Cmd] System Reset.\n";
         }
         // 7. SHUTDOWN
         else if (ctre::search<R"(\[ACTION\]\s*SHUTDOWN)">(line)) {
-            ctx.shouldExit = true;
-            ctx.abortBenchmark = true;
+            ctx.shouldExit.store(true, std::memory_order_release);
+            requestBenchmarkStop();
             out << "Shutdown initiated. Server will terminate shortly...\n";
-            ctx.threadPool->enqueue([](){
-                std::this_thread::sleep_for(std::chrono::seconds(3));
-                std::cout << "[System] Timed shutdown executing..." << std::endl;
-                std::exit(0); 
-            });
         }
         // 8. TREND K=(\d+)
         else if (auto m = ctre::search<R"(\[ACTION\]\s*TREND\s*K=(\d+))">(line)) {
@@ -165,7 +188,7 @@ private:
             long long ts = GlobalUtils::parseTimeSeconds(m.get<1>().to_string());
             std::string content = m.get<2>().to_string();
             
-            if (ts > ctx.lastTimestamp) ctx.lastTimestamp = ts;
+            ctx.observeTimestamp(ts);
             
             internalProcess(ts, content);
             return true;
@@ -173,8 +196,8 @@ private:
         
         // 2. 纯文本 (无时间戳，自动补全)
         // 此时直接认为是数据
-        ctx.lastTimestamp++; // 简单递增
-        internalProcess(ctx.lastTimestamp, line);
+        const long long timestamp = ctx.nextTimestamp();
+        internalProcess(timestamp, line);
         return true;
     }
 
@@ -191,29 +214,93 @@ private:
 
     // === 压测任务 (运行在 ThreadPool 中) ===
     void runBenchmark(int n) {
-        ctx.isBenchmarkRunning = true; 
-        long long startTs = ctx.lastTimestamp; 
-        ctx.monitor->reset();
-        
-        std::cout << "[Benchmark] Started on thread " << std::this_thread::get_id() << std::endl;
+        try {
+            ctx.monitor->reset();
 
-        for(int i = 0; i < n; i++) {
-            if (ctx.abortBenchmark) {
-                std::cout << "[System] Benchmark aborted by user." << std::endl;
-                break;
+            std::cout << "[Benchmark] Started on thread " << std::this_thread::get_id() << std::endl;
+
+            for (int i = 0; i < n; ++i) {
+                if (ctx.abortBenchmark.load(std::memory_order_acquire)) {
+                    std::cout << "[System] Benchmark aborted by user." << std::endl;
+                    break;
+                }
+
+                const long long timestamp = ctx.nextTimestamp();
+                internalProcess(timestamp, GlobalUtils::generateRandomSentence());
             }
 
-            startTs++; 
-            std::string sentence = GlobalUtils::generateRandomSentence();
-
-            // 更新时间戳 (非严格精确，但这主要用于模拟)
-            ctx.lastTimestamp = startTs;
-            
-            // 调用处理逻辑 (内部会自动加锁)
-            internalProcess(startTs, sentence);
+            std::cout << "[System] Benchmark finished." << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "[System] Benchmark failed: " << e.what() << std::endl;
+        } catch (...) {
+            std::cerr << "[System] Benchmark failed with unknown error." << std::endl;
         }
 
-        ctx.isBenchmarkRunning = false;
-        std::cout << "[System] Benchmark finished." << std::endl;
+        ctx.isBenchmarkRunning.store(false, std::memory_order_release);
+        benchmarkCv.notify_all();
+    }
+
+    bool startBenchmark(int n) {
+        std::unique_lock<std::mutex> lock(benchmarkMtx);
+
+        // Check the atomic state before waiting on a completed task's future;
+        // a repeated start must be rejected immediately while the current
+        // benchmark is still running.
+        if (ctx.isBenchmarkRunning.load(std::memory_order_acquire)) {
+            return false;
+        }
+
+        if (benchmarkFuture.valid()) {
+            try {
+                benchmarkFuture.get();
+            } catch (...) {
+                // runBenchmark already reports task failures; do not make a
+                // completed benchmark prevent the next start.
+            }
+        }
+
+        bool expected = false;
+        if (!ctx.isBenchmarkRunning.compare_exchange_strong(
+                expected, true, std::memory_order_acq_rel)) {
+            return false;
+        }
+
+        ctx.abortBenchmark.store(false, std::memory_order_release);
+        try {
+            benchmarkFuture = ctx.threadPool->enqueue([this, n]() {
+                runBenchmark(n);
+            });
+        } catch (...) {
+            ctx.isBenchmarkRunning.store(false, std::memory_order_release);
+            benchmarkCv.notify_all();
+            return false;
+        }
+        return true;
+    }
+
+    void requestBenchmarkStop() {
+        ctx.abortBenchmark.store(true, std::memory_order_release);
+    }
+
+    void waitForBenchmark() {
+        std::future<void> completed;
+        {
+            std::unique_lock<std::mutex> lock(benchmarkMtx);
+            benchmarkCv.wait(lock, [this]() {
+                return !ctx.isBenchmarkRunning.load(std::memory_order_acquire);
+            });
+            if (benchmarkFuture.valid()) {
+                completed = std::move(benchmarkFuture);
+            }
+        }
+
+        if (completed.valid()) {
+            try {
+                completed.get();
+            } catch (...) {
+                // The task wrapper reports benchmark failures; shutdown must
+                // still continue to release all resources.
+            }
+        }
     }
 };

@@ -8,7 +8,8 @@
 #include <sstream>
 #include <chrono>
 #include <mutex>
-#include <map> 
+#include <map>
+#include <filesystem>
 
 #include "httplib.h"
 #include "json.hpp"
@@ -16,13 +17,6 @@
 #include "CommandExecutor.h"
 #include "GlobalUtils.h"
 #include "SlidingWindow.h"
-
-#ifdef _WIN32
-#include <direct.h>
-#else
-#include <unistd.h>
-#define _getcwd getcwd
-#endif
 
 using json = nlohmann::json;
 
@@ -33,7 +27,7 @@ private:
     httplib::Server svr;
 
     // 静态资源搜索路径：优先 web/ 目录，兼顾构建目录结构
-    const std::vector<std::string> baseDirs = { "web/", "../web/", "./" };
+    const std::vector<std::string> baseDirs = { "web/", "../web/" };
 
 public:
     APIServer(SystemContext& context, CommandExecutor& exec) : ctx(context), executor(exec) {
@@ -42,10 +36,26 @@ public:
 
     void start(int port) {
         std::cout << "[Web] GUI Server running at http://localhost:" << port << std::endl;
-        svr.listen("0.0.0.0", port);
+        svr.listen("127.0.0.1", port);
+    }
+
+    void stop() {
+        svr.stop();
     }
 
 private:
+    static bool isValidSensitiveWord(const json& value, std::string& word) {
+        if (!value.is_string()) return false;
+
+        word = value.get<std::string>();
+        if (word.empty() || word.size() > 256) return false;
+
+        for (unsigned char ch : word) {
+            if (ch < 0x20 || ch == 0x7F) return false;
+        }
+        return true;
+    }
+
     // 辅助：获取文件的 MIME 类型
     std::string getMimeType(const std::string& path) {
         if (path.find(".html") != std::string::npos) return "text/html";
@@ -59,8 +69,30 @@ private:
 
     // 辅助：尝试从配置的目录列表中读取文件内容
     bool readFile(const std::string& filename, std::string& outContent) {
+        const std::filesystem::path relativePath(filename);
+        if (filename.empty() || relativePath.has_root_name() || relativePath.has_root_directory()) {
+            return false;
+        }
+
+        for (const auto& component : relativePath) {
+            if (component == "..") return false;
+        }
+
         for (const auto& dir : baseDirs) {
-            std::string fullPath = dir + filename;
+            std::error_code error;
+            const auto root = std::filesystem::weakly_canonical(dir, error);
+            if (error) continue;
+
+            const auto fullPath = std::filesystem::weakly_canonical(root / relativePath, error);
+            if (error) continue;
+
+            const auto relativeToRoot = fullPath.lexically_relative(root);
+            if (relativeToRoot.empty() || relativeToRoot.is_absolute() ||
+                relativeToRoot.begin()->string() == ".." ||
+                !std::filesystem::is_regular_file(fullPath, error) || error) {
+                continue;
+            }
+
             std::ifstream ifs(fullPath, std::ios::binary); // 二进制读取更安全
             if (ifs.is_open()) {
                 std::stringstream buffer;
@@ -89,11 +121,8 @@ private:
                 res.set_content(content, getMimeType(path));
             } else {
                 // 文件未找到
-                char cwd[1024]; 
-                _getcwd(cwd, sizeof(cwd));
-                std::string err = "<h1>404 Not Found</h1><p>File '" + path + "' not found in web/ folder.</p><p>Current Dir: " + std::string(cwd) + "</p>";
                 res.status = 404;
-                res.set_content(err, "text/html");
+                res.set_content("<h1>404 Not Found</h1>", "text/html");
             }
         });
 
@@ -101,7 +130,7 @@ private:
         svr.Get("/api/data", [&](const httplib::Request& req, httplib::Response& res) {
             std::lock_guard<std::mutex> lock(ctx.global_mutex);
 
-            if (ctx.shouldExit) {
+            if (ctx.shouldExit.load(std::memory_order_acquire)) {
                 json j;
                 j["shutdown"] = true;
                 res.set_content(j.dump(), "application/json");
@@ -165,13 +194,10 @@ private:
                     res.set_content(resp.dump(), "application/json");
                 }
 
-                if (ctx.shouldExit) {
-                    std::thread([&](){
-                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                        std::cout << "[System] Shutting down from web request..." << std::endl;
-                        svr.stop();
-                        std::exit(0); // 强制退出
-                    }).detach();
+                if (ctx.shouldExit.load(std::memory_order_acquire)) {
+                    // Stop accepting new requests. main() owns the remaining
+                    // shutdown sequence and will join the server thread.
+                    svr.stop();
                 }
             } catch (...) {
                 res.status = 400;
@@ -214,7 +240,21 @@ private:
         svr.Post("/api/config", [&](const httplib::Request& req, httplib::Response& res) {
             try {
                 auto j = json::parse(req.body);
-                
+                std::string addSensitive;
+                std::string removeSensitive;
+                if (j.contains("add_sensitive") &&
+                    !isValidSensitiveWord(j["add_sensitive"], addSensitive)) {
+                    res.status = 400;
+                    res.set_content("{\"status\":\"error\",\"message\":\"invalid sensitive word\"}", "application/json");
+                    return;
+                }
+                if (j.contains("remove_sensitive") &&
+                    !isValidSensitiveWord(j["remove_sensitive"], removeSensitive)) {
+                    res.status = 400;
+                    res.set_content("{\"status\":\"error\",\"message\":\"invalid sensitive word\"}", "application/json");
+                    return;
+                }
+
                 std::lock_guard<std::mutex> lock(ctx.global_mutex);
                 
                 if (j.contains("tags") || j.contains("allow_all")) {
@@ -235,8 +275,8 @@ private:
                     ctx.processor->setSensitiveConfig(j["allow_sensitive"]);
                 }
 
-                if (j.contains("add_sensitive")) ctx.processor->addSensitiveWord(j["add_sensitive"]);
-                if (j.contains("remove_sensitive")) ctx.processor->removeSensitiveWord(j["remove_sensitive"]);
+                if (j.contains("add_sensitive")) ctx.processor->addSensitiveWord(addSensitive);
+                if (j.contains("remove_sensitive")) ctx.processor->removeSensitiveWord(removeSensitive);
 
                 json resp;
                 resp["status"] = "ok";

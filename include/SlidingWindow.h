@@ -26,9 +26,6 @@ private:
     // 即使窗口只有 10秒，我们也保留 100分钟数据，以便用户随时把窗口拉大
     std::atomic<long long> maxRetentionSeconds{6000};
 
-    // 重置标志，用于控制reset操作期间的数据添加
-    std::atomic<bool> isResetting{false};
-
     // 1. 物理存储 (Storage)：保留所有原始数据，用于“回滚”和“重算”
     // 使用std::map保证时间戳有序
     std::map<long long, std::vector<std::string>> storage;
@@ -53,9 +50,6 @@ private:
     // 假设窗口大小为10分钟，每秒10条数据，大约6000条
     const size_t MAX_ACTIVE_ENTRIES = 100000;
     
-    // 批量处理阈值
-    const size_t BATCH_EVICTION_SIZE = 1000;
-
 
 public:
     // 构造函数，接收 SystemContext 引用
@@ -66,82 +60,45 @@ public:
     void addData(long long timestamp, const std::vector<std::string>& words) {
         if (words.empty()) return;
 
-        // 检查是否正在执行reset操作
-        while (isResetting.load(std::memory_order_acquire)) {
-            // 如果正在执行reset操作，等待直到完成
-            std::this_thread::yield();
+        // reset 与 addData 通过同一把写锁互斥，不再依赖固定 sleep 或轮询。
+        std::unique_lock<std::shared_mutex> lock(rw_mtx);
+
+        // currentTimeCursor 是当前输入流的最大时间戳。乱序输入不会回退游标。
+        if (timestamp > currentTimeCursor.load(std::memory_order_relaxed)) {
+            currentTimeCursor.store(timestamp, std::memory_order_relaxed);
         }
 
-        // 再次检查是否正在执行reset操作，因为可能在等待期间状态发生了变化
-        if (isResetting.load(std::memory_order_acquire)) {
-            return;
+        const long long windowSize = windowSizeSeconds.load(std::memory_order_relaxed);
+        const long long threshold = currentTimeCursor.load(std::memory_order_relaxed) - windowSize;
+
+        // 存入物理存储；同一时间戳的数据合并，便于 resize 后重建。
+        auto storageIt = storage.find(timestamp);
+        if (storageIt == storage.end()) {
+            storage.emplace(timestamp, words);
+        } else {
+            storageIt->second.reserve(storageIt->second.size() + words.size());
+            storageIt->second.insert(storageIt->second.end(), words.begin(), words.end());
         }
 
-        // 1. 更新系统时间（无锁操作）
-        long long oldCursor = currentTimeCursor;
-        while (timestamp > oldCursor) {
-            if (currentTimeCursor.compare_exchange_weak(oldCursor, timestamp)) {
-                break;
+        // 只有严格晚于当前窗口下界的数据进入 active view。晚到但仍在窗口内
+        // 的数据按时间戳插入，避免破坏 activeData 的时间顺序；更老的数据
+        // 只保留在 storage（如果仍在 retention 范围内）。
+        if (timestamp > threshold) {
+            for (const std::string& word : words) {
+                ++wordCounts[word];
             }
-            // 每次尝试更新后，都检查是否正在执行reset操作
-            if (isResetting.load(std::memory_order_acquire)) {
-                return;
-            }
+
+            auto insertPosition = std::upper_bound(
+                activeData.begin(), activeData.end(), timestamp,
+                [](long long value, const auto& entry) {
+                    return value < entry.first;
+                });
+            activeData.insert(insertPosition, {timestamp, words});
         }
 
-        // 检查是否正在执行reset操作，因为可能在更新系统时间期间状态发生了变化
-        if (isResetting.load(std::memory_order_acquire)) {
-            return;
-        }
-
-        // 2. 获取窗口大小（无锁操作）
-        long long windowSize = windowSizeSeconds;
-        long long threshold = timestamp - windowSize;
-
-        // 检查是否正在执行reset操作，因为可能在获取窗口大小期间状态发生了变化
-        if (isResetting.load(std::memory_order_acquire)) {
-            return;
-        }
-
-        // 3. 加写锁处理数据存储和更新
-        {
-            std::unique_lock<std::shared_mutex> lock(rw_mtx);
-
-            // 再次检查是否正在执行reset操作，因为可能在获取锁期间状态发生了变化
-            if (isResetting.load(std::memory_order_acquire)) {
-                return;
-            }
-
-            // 存入物理存储 (Storage) - 只要不过期太久都存
-            // 注意：这里处理乱序，如果 key 已存在则追加
-            auto storageIt = storage.find(timestamp);
-            if (storageIt == storage.end()) {
-                storage[timestamp] = words;
-            } else {
-                // 预留空间，减少内存重分配
-                storageIt->second.reserve(storageIt->second.size() + words.size());
-                storageIt->second.insert(storageIt->second.end(), words.begin(), words.end());
-            }
-
-            // 更新逻辑视图 (Active View)
-            // 只有当数据在“当前窗口”范围内时，才计入统计
-            if (timestamp > threshold) {
-                // 计入词频
-                for (const std::string& w : words) {
-                    wordCounts[w]++;
-                }
-                // 放入活跃队列，使用move减少拷贝
-                activeData.emplace_back(timestamp, words);
-            }
-
-            // 4. 批量执行淘汰 (逻辑淘汰 + 物理淘汰)
-            // 每处理一定数量的数据后再执行淘汰，减少频繁操作
-            // 每1000条数据检查一次，减少检查频率
-            if (activeData.size() % 1000 == 0) {
-                evictOutdatedData();
-                evictOverLimitData();
-            }
-        }
+        // 每次接入都清理，保证查询不会看到已经超出逻辑窗口的数据。
+        evictOutdatedData();
+        evictOverLimitData();
     }
 
     // --- 设置窗口大小 ---
@@ -184,6 +141,7 @@ public:
             
             // 4. 顺便清理一下太老的物理数据
             evictPhysicalStorage();
+            evictOverLimitData();
         }
     }
 
@@ -305,21 +263,13 @@ public:
     }
 
     void reset() {
-        // 设置重置标志为true，阻止新的数据添加
-        isResetting.store(true, std::memory_order_release);
-        
-        // 短暂延迟，让所有正在执行addData操作的线程有机会检查isResetting标志
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        
-        // 使用写锁，因为需要修改所有数据结构
+        // addData 同样持有 rw_mtx 的写锁，因此 reset 会等待正在进行的
+        // 数据接入完成，并阻止新的接入进入临界区。
         std::unique_lock<std::shared_mutex> lock(rw_mtx);
         storage.clear();
         activeData.clear();
         wordCounts.clear();
-        currentTimeCursor = 0;
-        
-        // 重置操作完成，设置标志为false
-        isResetting.store(false, std::memory_order_release);
+        currentTimeCursor.store(0, std::memory_order_relaxed);
     }
 
     // 设置最大保留时间 (Storage)
@@ -355,39 +305,50 @@ public:
     }
 
 private:
+    void removeActiveEntriesAtTimestamp(long long timestamp) {
+        for (auto it = activeData.begin(); it != activeData.end();) {
+            if (it->first < timestamp) {
+                ++it;
+                continue;
+            }
+            if (it->first > timestamp) break;
+
+            for (const std::string& word : it->second) {
+                auto countIt = wordCounts.find(word);
+                if (countIt != wordCounts.end()) {
+                    if (--countIt->second <= 0) {
+                        wordCounts.erase(countIt);
+                    }
+                }
+            }
+            it = activeData.erase(it);
+        }
+    }
+
     // 强制容量限制
     void evictOverLimitData() {
-        // 批量删除，减少迭代次数
+        bool capacityEvicted = false;
+
         if (storage.size() > MAX_STORAGE_ENTRIES) {
             size_t excessStorage = storage.size() - MAX_STORAGE_ENTRIES;
-            // 限制每次删除的数量，避免长时间占用锁
-            size_t batchSize = std::min(excessStorage, BATCH_EVICTION_SIZE);
             auto it = storage.begin();
             
-            for (size_t i = 0; i < batchSize && it != storage.end(); ++i) {
-                // storage.begin() 是最老的时间戳
-                // 注意：如果被删除的数据恰好在当前的 Active Window 内（窗口极大），
-                // 理论上我们也应该从 activeData 和 wordCounts 里扣除。
-                // 但这种情况极少见（意味着你的窗口比内存上限还大），
-                // 为了防止系统崩溃，我们优先保命（删除 storage），数据一致性做次要处理。
-                
-                // 简单处理：仅从物理存储删除，防止 storage 无限膨胀
-                // 如果用户此时把窗口拉大到覆盖这些被删除的数据，会发现数据缺失（这是预期的牺牲）
+            for (size_t i = 0; i < excessStorage && it != storage.end(); ++i) {
+                // storage.begin() 是最老的时间戳。若它仍在 activeData 中，
+                // 先同步移除 active 条目和词频，避免当前视图继续引用已丢弃数据。
+                removeActiveEntriesAtTimestamp(it->first);
                 it = storage.erase(it);
+                capacityEvicted = true;
             }
-
-            // 设置容量超限标志
-            ctx.capacityLimitEvictionOccurred = true; 
         }
         
         // 同时也检查一下 activeData (逻辑队列)，防止极端情况下队列过长
         // 比如有人恶意把 windowSize 设为 10年
         if (activeData.size() > MAX_ACTIVE_ENTRIES) {
             size_t excessActive = activeData.size() - MAX_ACTIVE_ENTRIES;
-            // 限制每次删除的数量，避免长时间占用锁
-            size_t batchSize = std::min(excessActive, BATCH_EVICTION_SIZE);
+            capacityEvicted = true;
             
-            for (size_t i = 0; i < batchSize && !activeData.empty(); ++i) {
+            for (size_t i = 0; i < excessActive && !activeData.empty(); ++i) {
                 const auto& pair = activeData.front();
                 const std::vector<std::string>& words = pair.second;
                 
@@ -402,6 +363,10 @@ private:
                 activeData.pop_front();
             }
         }
+
+        if (capacityEvicted) {
+            ctx.capacityLimitEvictionOccurred.store(true, std::memory_order_release);
+        }
     }
 
     void evictOutdatedData() {
@@ -409,10 +374,7 @@ private:
         long long windowSize = windowSizeSeconds;
         long long threshold = currentTime - windowSize;
 
-        // 1. 逻辑淘汰：仅从 activeData 和 wordCounts 中移除
-        size_t evictedCount = 0;
-        
-        // 批量处理过期数据，减少循环次数
+        // 1. 逻辑淘汰：仅从 activeData 和 wordCounts 中移除。
         while (!activeData.empty() && activeData.front().first <= threshold) {
             const auto& pair = activeData.front();
             const std::vector<std::string>& words = pair.second;
@@ -429,12 +391,6 @@ private:
             }
             
             activeData.pop_front();
-            evictedCount++;
-            
-            // 限制每次处理的数量，避免长时间占用锁
-            if (evictedCount >= BATCH_EVICTION_SIZE) {
-                break;
-            }
         }
 
         // 2. 物理淘汰：清理 storage 中太老的数据（比如 1小时前的）
@@ -451,19 +407,11 @@ private:
         // map 是有序的，直接检查头部
         auto it = storage.begin();
         // 一个flag，只要发生了一次删除，就设置
-        bool evicted = false; 
-        size_t evictedCount = 0;
-        
-        // 批量处理过期数据
+        bool evicted = false;
+
         while (it != storage.end() && it->first <= physicalThreshold) {
             it = storage.erase(it); // 返回下一个迭代器
             evicted = true; // 标记发生了驱逐
-            evictedCount++;
-            
-            // 限制每次处理的数量，避免长时间占用锁
-            if (evictedCount >= BATCH_EVICTION_SIZE) {
-                break;
-            }
         }
 
         // 如果发生了驱逐，设置时间超限标志

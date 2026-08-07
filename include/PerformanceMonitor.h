@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <map>
 #include <string>
+#include <mutex>
 
 // --- Windows 内存监控依赖 ---
 #ifdef _WIN32
@@ -20,6 +21,12 @@ private:
     std::atomic<long long> totalProcessedLines{0};
 
     std::chrono::steady_clock::time_point startTime;
+    mutable std::mutex startTimeMtx;
+
+    std::chrono::steady_clock::time_point getStartTimeSnapshot() const {
+        std::lock_guard<std::mutex> lock(startTimeMtx);
+        return startTime;
+    }
 
 public:
     PerformanceMonitor() {
@@ -34,7 +41,10 @@ public:
     void reset() {
         totalProcessedWords = 0;
         totalProcessedLines = 0;
-        startTime = std::chrono::steady_clock::now();
+        {
+            std::lock_guard<std::mutex> lock(startTimeMtx);
+            startTime = std::chrono::steady_clock::now();
+        }
     }
 
     // 获取当前内存占用 (单位: MB)
@@ -52,7 +62,8 @@ public:
     // 返回结构化数据，供 Web API 使用
     std::map<std::string, double> getStats() {
         auto now = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
+        const auto start = getStartTimeSnapshot();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
         if (duration == 0) duration = 1;
 
         double seconds = duration / 1000.0;
@@ -70,7 +81,8 @@ public:
 
     void printStats() {
         auto now = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
+        const auto start = getStartTimeSnapshot();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
         if (duration == 0) duration = 1;
 
         double seconds = duration / 1000.0;

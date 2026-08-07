@@ -125,10 +125,11 @@ function showNotification(title, message, type = 'warning', duration = 5000) {
     toast.onclick = closeToast;
     toast.style.cursor = 'pointer'; // 让鼠标变成手型，提示可点击关闭
 
-    toast.innerHTML = `
-        <h4>${title}</h4>
-        <p>${message}</p>
-    `;
+    const titleElement = document.createElement('h4');
+    titleElement.textContent = title;
+    const messageElement = document.createElement('p');
+    messageElement.textContent = message;
+    toast.replaceChildren(titleElement, messageElement);
 
     container.appendChild(toast);
 
@@ -382,7 +383,7 @@ function loadConfigState() {
                 s.style.background = "#fee2e2";
                 s.style.color = "#b91c1c";
                 s.style.borderColor = "#fecaca";
-                s.innerHTML = `${w} ×`;
+                s.textContent = `${w} ×`;
                 s.onclick = () => removeSensitive(w);
                 div.appendChild(s);
             });
@@ -439,18 +440,30 @@ function renderTrends(list) {
     list.forEach(item => {
         if (Math.abs(item.score) < threshold) return;
         const tr = document.createElement('tr');
+        const rankCell = document.createElement('td');
+        rankCell.textContent = String(rank++);
+        const wordCell = document.createElement('td');
+        wordCell.textContent = item.word;
+        wordCell.style.fontWeight = 'bold';
+        const scoreCell = document.createElement('td');
+        scoreCell.textContent = item.score.toFixed(2);
+        const statusCell = document.createElement('td');
+
         if (item.score > 0) {
             const hotness = item.score / maxScore;
             const alpha = 0.5 + (hotness * 0.5);
-            const colorStyle = `style="color: rgba(220, 38, 38, ${alpha});"`;
+            scoreCell.className = 'trend-up';
+            scoreCell.style.color = `rgba(220, 38, 38, ${alpha})`;
             let statusEmoji = '🔥';
             if (hotness >= 0.8) statusEmoji = '🔥🔥🔥';
             else if (hotness >= 0.4) statusEmoji = '🔥🔥';
             if (item.score === maxScore && maxScore > threshold) statusEmoji = '🌋';
-            tr.innerHTML = `<td>${rank++}</td><td style="font-weight:bold;">${item.word}</td><td class="trend-up" ${colorStyle}>${item.score.toFixed(2)}</td><td>${statusEmoji}</td>`;
+            statusCell.textContent = statusEmoji;
         } else {
-            tr.innerHTML = `<td>${rank++}</td><td style="font-weight:bold;">${item.word}</td><td class="trend-down">${item.score.toFixed(2)}</td><td>❄️</td>`;
+            scoreCell.className = 'trend-down';
+            statusCell.textContent = '❄️';
         }
+        tr.append(rankCell, wordCell, scoreCell, statusCell);
         tbody.appendChild(tr);
     });
 }
@@ -578,7 +591,16 @@ function removeSensitive(w) {
 
     // 2. 填充弹窗的动态内容
     const textElement = document.getElementById('removeSensitiveText');
-    textElement.innerHTML = `您确定要从屏蔽列表中移除 “<span class="highlight-word">${w}</span>” 吗？`;
+    textElement.replaceChildren(
+        document.createTextNode('您确定要从屏蔽列表中移除 “'),
+        (() => {
+            const wordElement = document.createElement('span');
+            wordElement.className = 'highlight-word';
+            wordElement.textContent = w;
+            return wordElement;
+        })(),
+        document.createTextNode('” 吗？')
+    );
 
     // 3. 显示弹窗
     const modal = document.getElementById('removeSensitiveModal');
